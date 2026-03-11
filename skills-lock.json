@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "skills": {
+    "axios": {
+      "source": "local",
+      "sourceType": "local",
+      "path": ".agents/skills/axios"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
+    "frontend-design-system": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "5c20c46162ec89c01473e55f66d9b79f5c8f0ec38d8b3d5386a0c47634ff239e"
+    },
+    "frontend-ui-animator": {
+      "source": "julianromli/ai-skills",
+      "sourceType": "github",
+      "computedHash": "8d96d8cb9c3aeea2227a039fa6eb573d6cde6cc27897a0a5ddee7f348c076496"
+    },
+    "react-19": {
+      "source": "local",
+      "sourceType": "local",
+      "path": ".agents/skills/react-19"
+    },
+    "skill-creator": {
+      "source": "local",
+      "sourceType": "local",
+      "path": ".agents/skills/skill-creator"
+    },
+    "skill-sync": {
+      "source": "local",
+      "sourceType": "local",
+      "path": ".agents/skills/skill-sync"
+    },
+    "typescript": {
+      "source": "local",
+      "sourceType": "local",
+      "path": ".agents/skills/typescript"
+    },
+    "zustand-5": {
+      "source": "local",
+      "sourceType": "local",
+      "path": ".agents/skills/zustand-5"
+    }
+  }
+}
