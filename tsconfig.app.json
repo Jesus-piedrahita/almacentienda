@@ -17,7 +17,7 @@
     "jsx": "react-jsx",
 
     /* Import alias */
-    "baseUrl": ".",
+    // "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
