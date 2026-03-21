@@ -1,0 +1,23 @@
+# Dockerfile.dev - Frontend Development with Hot-Reload
+# Usar con: docker-compose -f docker-compose.yml --profile dev up frontend-dev
+
+FROM node:20-alpine
+
+RUN npm install -g bun
+
+WORKDIR /app
+
+# Copiar solo archivos de dependencias primero para caché
+COPY package.json bun.lock ./
+
+# Instalar dependencias
+RUN bun install
+
+# Copiar código fuente
+COPY . .
+
+# Exponer puerto de desarrollo
+EXPOSE 5173
+
+# Iniciar Vite en modo desarrollo con hot-reload
+CMD ["bun", "run", "dev", "--host", "0.0.0.0"]

@@ -1,8 +1,17 @@
+/**
+ * @fileoverview Componente Button reutilizable con múltiples variantes y tamaños.
+ * Construido sobre Base UI Button con estilos personalizados mediante Tailwind CSS.
+ */
+
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Variantes de estilo para el componente Button.
+ * Define múltiples estilos visuales y tamaños disponibles.
+ */
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
@@ -40,6 +49,32 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * Componente Button reutilizable.
+ *
+ * Proporciona un botón accesible y flexible con soporte para múltiples variantes
+ * (default, outline, secondary, ghost, destructive, link) y tamaños (xs, sm, default, lg, icon*).
+ *
+ * @param props - Props del Button nativo de HTML más propriedad variant y size
+ * @param props.variant - Estilo visual del botón: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link"
+ * @param props.size - Tamaño del botón: "xs" | "sm" | "default" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg"
+ * @param props.className - Clases CSS adicionales (se fusionan con las variantes automáticamente)
+ *
+ * @example
+ * ```tsx
+ * // Botón primario
+ * <Button>Click me</Button>
+ *
+ * // Botón outline pequeño
+ * <Button variant="outline" size="sm">Small Outline</Button>
+ *
+ * // Botón destructivo
+ * <Button variant="destructive">Delete</Button>
+ *
+ * // Botón con solo icono
+ * <Button size="icon"><Icon /></Button>
+ * ```
+ */
 function Button({
   className,
   variant = "default",
@@ -55,4 +90,5 @@ function Button({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { Button, buttonVariants }
