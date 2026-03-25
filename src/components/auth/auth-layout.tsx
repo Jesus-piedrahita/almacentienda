@@ -65,7 +65,7 @@ export function AuthLayout({ children, className }: AuthLayoutProps) {
           </div>
           <span className="text-xl font-semibold">Almacén Tienda</span>
         </div>
-        <img src="../../../public/undraw_authentication_1evl.svg" alt="login" className="max-w-xl" />
+        <img src="/undraw_authentication_1evl.svg" alt="login" className="max-w-xl" />
 
         <div className="space-y-4">
           <h1 className="text-4xl font-bold tracking-tight">

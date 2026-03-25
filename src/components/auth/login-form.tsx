@@ -1,18 +1,20 @@
 /**
  * @fileoverview Formulario de inicio de sesión.
- * Componente de formulario con validación Zod y manejo de errores.
+ * Componente de formulario con validación Zod y conexión a API.
  */
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Link } from "react-router"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { loginSchema, type LoginFormData } from "@/lib/validations/login-schema"
-import { cn } from "@/lib/utils"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Link, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { loginSchema, type LoginFormData } from "@/lib/validations/login-schema";
+import { useLogin } from "@/hooks/use-auth";
+import { useAuthStore } from "@/stores/auth-store";
+import { cn } from "@/lib/utils";
 
 /**
  * Componente LoginForm - Formulario de inicio de sesión.
@@ -22,42 +24,54 @@ import { cn } from "@/lib/utils"
  * - Campo de contraseña
  * - Validación en tiempo real
  * - Manejo de estados de carga
+ * - Conexión con API de autenticación
  * - Enlace a registro para usuarios nuevos
- *
- * Utiliza react-hook-form para la gestión del formulario y Zod para la validación
- * según el esquema definido en loginSchema.
  *
  * @param props - Props del componente
  * @param props.className - Clases CSS adicionales para el Card
  *
  * @returns El formulario de login renderizado dentro de un Card
- *
- * @example
- * ```tsx
- * <LoginForm />
- *
- * // Con clases personalizadas
- * <LoginForm className="mb-4" />
- * ```
- *
- * @todo Reemplazar console.log con llamada real a API
- * @todo Agregar manejo de errores HTTP
- * @todo Implementar redirección tras login exitoso
  */
 export function LoginForm({ className }: { className?: string }) {
+  const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-  })
+  });
+
+  const loginMutation = useLogin();
 
   const onSubmit = async (data: LoginFormData) => {
-    // TODO: Replace with actual API call
-    console.log("Login data:", data)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-  }
+    try {
+      const response = await loginMutation.mutateAsync({
+        email: data.email,
+        password: data.password,
+      });
+
+      // Get user data from login response by calling /me
+      // For now, create minimal user object from login data
+      const userData = {
+        id: 0, // Will be set by /me call
+        email: data.email,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+
+      // Store auth data in Zustand store
+      setAuth(response.access_token, userData);
+
+      // Redirect to home/dashboard after successful login
+      navigate("/");
+    } catch (error) {
+      // Error is handled by React Query - shows in UI via error state
+      console.error("Login error:", error);
+    }
+  };
 
   return (
     <Card className={cn("w-full shadow-lg", className)}>
@@ -95,8 +109,16 @@ export function LoginForm({ className }: { className?: string }) {
               <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Iniciando sesión..." : "Iniciar Sesión"}
+          
+          {/* Error from API */}
+          {loginMutation.isError && (
+            <p className="text-sm text-destructive">
+              {loginMutation.error?.message || "Error al iniciar sesión"}
+            </p>
+          )}
+          
+          <Button type="submit" className="w-full" disabled={isSubmitting || loginMutation.isPending}>
+            {loginMutation.isPending ? "Iniciando sesión..." : "Iniciar Sesión"}
           </Button>
         </form>
       </CardContent>
@@ -113,5 +135,5 @@ export function LoginForm({ className }: { className?: string }) {
         </p>
       </CardFooter>
     </Card>
-  )
+  );
 }

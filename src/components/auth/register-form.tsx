@@ -1,18 +1,19 @@
 /**
  * @fileoverview Formulario de registro de usuario.
- * Componente de formulario con validación Zod y confirmación de contraseña.
+ * Componente de formulario con validación Zod y conexión a API.
  */
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Link } from "react-router"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { registerSchema, type RegisterFormData } from "@/lib/validations/register-schema"
-import { cn } from "@/lib/utils"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Link, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { registerSchema, type RegisterFormData } from "@/lib/validations/register-schema";
+import { useRegister } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
 
 /**
  * Componente RegisterForm - Formulario de registro de usuario.
@@ -24,43 +25,42 @@ import { cn } from "@/lib/utils"
  * - Validación en tiempo real
  * - Validación de coincidencia entre contraseñas
  * - Manejo de estados de carga
+ * - Conexión con API de autenticación
  * - Enlace a login para usuarios existentes
- *
- * Utiliza react-hook-form para la gestión del formulario y Zod para la validación
- * según el esquema definido en registerSchema.
  *
  * @param props - Props del componente
  * @param props.className - Clases CSS adicionales para el Card
  *
  * @returns El formulario de registro renderizado dentro de un Card
- *
- * @example
- * ```tsx
- * <RegisterForm />
- *
- * // Con clases personalizadas
- * <RegisterForm className="mb-4" />
- * ```
- *
- * @todo Reemplazar console.log con llamada real a API
- * @todo Agregar validaciones adicionales (fortaleza de contraseña, términos)
- * @todo Implementar redirección tras registro exitoso
- * @todo Agregar verificación de email
  */
 export function RegisterForm({ className }: { className?: string }) {
+  const navigate = useNavigate();
+  
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-  })
+  });
+
+  const registerMutation = useRegister();
 
   const onSubmit = async (data: RegisterFormData) => {
-    // TODO: Replace with actual API call
-    console.log("Register data:", data)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-  }
+    try {
+      // Send only email and password to API (not confirmPassword)
+      await registerMutation.mutateAsync({
+        email: data.email,
+        password: data.password,
+      });
+
+      // Redirect to login page after successful registration
+      navigate("/login");
+    } catch (error) {
+      // Error is handled by React Query - shows in UI via error state
+      console.error("Register error:", error);
+    }
+  };
 
   return (
     <Card className={cn("w-full shadow-lg", className)}>
@@ -111,8 +111,16 @@ export function RegisterForm({ className }: { className?: string }) {
               <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Creando cuenta..." : "Crear Cuenta"}
+          
+          {/* Error from API */}
+          {registerMutation.isError && (
+            <p className="text-sm text-destructive">
+              {registerMutation.error?.message || "Error al crear cuenta"}
+            </p>
+          )}
+          
+          <Button type="submit" className="w-full" disabled={isSubmitting || registerMutation.isPending}>
+            {registerMutation.isPending ? "Creando cuenta..." : "Crear Cuenta"}
           </Button>
         </form>
       </CardContent>
@@ -129,5 +137,5 @@ export function RegisterForm({ className }: { className?: string }) {
         </p>
       </CardFooter>
     </Card>
-  )
+  );
 }
