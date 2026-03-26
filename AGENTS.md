@@ -12,8 +12,9 @@
 
 ### Normas Generales de Desarrollo Frontend
 
-1. **Documentación**: Todo archivo `.md` debe incluir un diagrama de flujo en Mermaid para explicar la idea/concepto.
-2. **TypeScript**: Usar tipos `const`, interfaces planas y tipos utilitarios. Nunca usar `any`.
+1. **Memoria Persistente (Engram)**: Antes de iniciar cualquier tarea, BUSCAR en Engram para actualizar contexto de sesiones previas. DESPUÉS de completar trabajo significativo, GUARDAR observación. Al finalizar sesión, generar session_summary.
+2. **Documentación**: Todo archivo `.md` debe incluir un diagrama de flujo en Mermaid para explicar la idea/concepto.
+3. **TypeScript**: Usar tipos `const`, interfaces planas y tipos utilitarios. Nunca usar `any`.
 3. **React 19**: Usar React Compiler cuando sea posible. Evitar `useMemo`/`useCallback` prematura.
 4. **Estado Cliente**: Usar Zustand para estado global, React Query para estado servidor.
 5. **Estado Servidor**: Usar React Query para fetching, caching y sincronización.
@@ -22,6 +23,44 @@
 8. **HTTP**: Usar Axios para peticiones HTTP.
 9. **Routing**: Usar React Router.
 10. **Commits**: Seguir conventional-commits: `<tipo>[alcance]: <descripción>`.
+
+---
+
+## Engram - Memoria Persistente
+
+El proyecto usa Engram para persistir contexto entre sesiones. Toda acción significativa debe registrarse.
+
+### Cuándo GUARDAR (mem_save)
+- Decisiones de arquitectura o diseño
+- Bug fixes completados
+- Patrones establecidos (naming, estructura, convenciones)
+- Cambios de configuración o setup
+- Descubrimientos importantes sobre el codebase
+
+### Cuándo BUSCAR (mem_search)
+- Cuando el usuario menciona algo del pasado ("recordar", "qué hicimos")
+- Al iniciar trabajo que podría haber sido hecho antes
+- Cuando el usuario menciona un tema sin contexto previo
+
+### Cómo USAR
+```typescript
+// Guardar observación
+mem_save({
+  title: "Título corto y buscable",
+  content: "**What**: qué se hizo\n**Why**: motivación\n**Where**: archivos afectados\n**Learned**: gotchas o decisiones",
+  type: "architecture|bugfix|pattern|decision",
+  project: "almacenTienda"
+})
+
+// Buscar en memoria
+mem_search({ query: "palabras clave", project: "almacenTienda" })
+
+// Resumen de sesión
+mem_session_summary({
+  content: "## Goal\n## Instructions\n## Discoveries\n## Accomplished\n## Relevant Files",
+  project: "almacenTienda"
+})
+```
 
 ---
 

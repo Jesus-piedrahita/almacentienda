@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router"
 import { LoginPage } from "./pages/login-page"
 import { RegisterPage } from "./pages/register-page"
 import { DashboardPage } from "./pages/dashboard-page"
+import { InventoryPage } from "./pages/inventory-page"
 import { MainLayout } from "./components/layout/main-layout"
 import { ProtectedRoute } from "./components/auth/protected-route"
 import { useAuthStore } from "./stores/auth-store"
@@ -51,6 +52,7 @@ function App() {
           }
         >
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
         </Route>
 
         {/* Redirect raíz a login */}
