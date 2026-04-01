@@ -3,19 +3,23 @@
  * Muestra estadísticas, estado del stock, y gestión de productos.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Package, Plus, TrendingUp, AlertTriangle, Tag } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useInventoryStore } from '@/stores/inventory-store';
 
 import { InventoryStatsCards } from '@/components/inventory/inventory-stats-cards';
 import { StockStatusIndicator } from '@/components/inventory/stock-status-indicator';
 import { CategoryChart } from '@/components/inventory/category-chart';
 import { ProductsTable } from '@/components/inventory/products-table';
+import { CategoryList } from '@/components/inventory/category-list';
 import { AddProductDialog } from '@/components/inventory/add-product-dialog';
-import { AddCategoryDialog } from '@/components/inventory/add-category-dialog';
+import { CategoryDialog } from '@/components/inventory/category-dialog';
+import { EditProductDialog } from '@/components/inventory/edit-product-dialog';
+import { useProducts, useCategories, useInventoryStats, useDeleteProduct, useDeleteCategory } from '@/hooks/use-inventory';
+import { confirmDelete, showError } from '@/hooks/use-confirm-dialog';
+import type { Product, Category } from '@/types/inventory';
 
 /**
  * InventoryPage - Página principal del módulo de inventario.
@@ -23,6 +27,7 @@ import { AddCategoryDialog } from '@/components/inventory/add-category-dialog';
  * Muestra:
  * - Estadísticas generales (total productos, por categoría, valor)
  * - Indicador visual del estado del stock
+ * - Lista de categorías con acciones (editar/eliminar)
  * - Tabla de productos con acciones
  * - Botón para agregar nuevos productos
  *
@@ -32,18 +37,82 @@ import { AddCategoryDialog } from '@/components/inventory/add-category-dialog';
  * ```
  */
 export function InventoryPage() {
-  const { products, categories, fetchProducts, fetchCategories, isLoading } = useInventoryStore();
+  // Estado local para dialogs
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, [fetchProducts, fetchCategories]);
+  // Queries con React Query
+  const { data: productsData, isLoading: isLoadingProducts } = useProducts(1);
+  const { data: categories, isLoading: isLoadingCategories } = useCategories();
+  const { data: stats, isLoading: isLoadingStats } = useInventoryStats();
+  
+  // Mutations
+  const deleteProductMutation = useDeleteProduct();
+  const deleteCategoryMutation = useDeleteCategory();
 
-  // Calcular estadísticas derivadas de los productos
-  const stats = products.length > 0 ? useInventoryStore.getState().getStats() : null;
+  // Productos del query
+  const products = productsData?.data ?? [];
+  const isLoading = isLoadingProducts || isLoadingCategories || isLoadingStats;
+
+  // Handlers para editar y eliminar productos
+  const handleEditProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    const confirmed = await confirmDelete(product.name);
+    
+    if (confirmed) {
+      try {
+        await deleteProductMutation.mutateAsync(product.id);
+      } catch (error) {
+        console.error('Error al eliminar producto:', error);
+        await showError('Error', 'No se pudo eliminar el producto. Intenta de nuevo.');
+      }
+    }
+  };
+
+  const handleEditDialogClose = (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (!open) {
+      setSelectedProduct(null);
+    }
+  };
+
+  // Handlers para categorías
+  const handleAddCategory = () => {
+    setSelectedCategory(null);
+    setIsCategoryDialogOpen(true);
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setSelectedCategory(category);
+    setIsCategoryDialogOpen(true);
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    const confirmed = await confirmDelete(category.name);
+    
+    if (confirmed) {
+      try {
+        await deleteCategoryMutation.mutateAsync(category.id);
+      } catch (error) {
+        console.error('Error al eliminar categoría:', error);
+        await showError('Error', 'No se pudo eliminar la categoría. Verifica que no tenga productos asociados.');
+      }
+    }
+  };
+
+  const handleCategoryDialogClose = (open: boolean) => {
+    setIsCategoryDialogOpen(open);
+    if (!open) {
+      setSelectedCategory(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -56,10 +125,6 @@ export function InventoryPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsAddCategoryDialogOpen(true)} className="gap-2">
-            <Tag className="size-4" />
-            Agregar Categoría
-          </Button>
           <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
             <Plus className="size-4" />
             Agregar Producto
@@ -68,7 +133,7 @@ export function InventoryPage() {
       </div>
 
       {/* Tarjetas de estadísticas */}
-      <InventoryStatsCards stats={stats} isLoading={isLoading} />
+      <InventoryStatsCards stats={stats ?? null} isLoading={isLoading} />
 
       {/* Estado del stock y gráfico por categoría */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -103,6 +168,28 @@ export function InventoryPage() {
         </Card>
       </div>
 
+      {/* Lista de categorías */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <Tag className="size-5 text-primary" />
+            Categorías
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={handleAddCategory} className="gap-2">
+            <Plus className="size-4" />
+            Agregar
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <CategoryList
+            categories={categories ?? []}
+            isLoading={isLoadingCategories}
+            onEdit={handleEditCategory}
+            onDelete={handleDeleteCategory}
+          />
+        </CardContent>
+      </Card>
+
       {/* Tabla de productos */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -115,7 +202,12 @@ export function InventoryPage() {
           </span>
         </CardHeader>
         <CardContent>
-          <ProductsTable products={products} isLoading={isLoading} />
+          <ProductsTable 
+            products={products} 
+            isLoading={isLoadingProducts}
+            onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
+          />
         </CardContent>
       </Card>
 
@@ -123,14 +215,25 @@ export function InventoryPage() {
       <AddProductDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        categories={categories}
+        categories={categories ?? []}
       />
 
-      {/* Dialog para agregar categoría */}
-      <AddCategoryDialog
-        open={isAddCategoryDialogOpen}
-        onOpenChange={setIsAddCategoryDialogOpen}
+      {/* Dialog para agregar/editar categoría */}
+      <CategoryDialog
+        open={isCategoryDialogOpen}
+        onOpenChange={handleCategoryDialogClose}
+        category={selectedCategory}
       />
+
+      {/* Dialog para editar producto */}
+      {selectedProduct && (
+        <EditProductDialog
+          open={isEditDialogOpen}
+          onOpenChange={handleEditDialogClose}
+          categories={categories ?? []}
+          product={selectedProduct}
+        />
+      )}
     </div>
   );
 }

@@ -1,204 +1,119 @@
 /**
- * @fileoverview Store de inventario con datos mock dinámicos.
+ * @fileoverview Store de inventario con integración a API real.
  * Proporciona estado global para productos, categorías y estadísticas.
- * Diseñado para facilitar la migración a API real.
+ * Conecta con el backend FastAPI en /api/inventory/*
  */
 
 import { create } from 'zustand';
+import api from '@/lib/api';
 import type {
   Product,
   Category,
   InventoryStats,
-  CategorySummary,
   CreateProductInput,
   CreateCategoryInput,
 } from '@/types/inventory';
-import { getStockStatus } from '@/types/inventory';
 
-/**
- * Datos mock iniciales - Categorías
- */
-const mockCategories: Category[] = [
-  { id: 'cat-1', name: 'Electrónica', description: 'Dispositivos electrónicos y accesorios' },
-  { id: 'cat-2', name: 'Ropa', description: 'Ropa y accesorios de vestir' },
-  { id: 'cat-3', name: 'Alimentos', description: 'Productos alimenticios y bebidas' },
-  { id: 'cat-4', name: 'Hogar', description: 'Artículos para el hogar' },
-  { id: 'cat-5', name: 'Deportes', description: 'Equipos y accesorios deportivos' },
-];
+// Tipos para la respuesta de la API
+interface ApiCategory {
+  id: number;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at?: string;
+}
 
-/**
- * Datos mock iniciales - Productos
- */
-const mockProducts: Product[] = [
-  {
-    id: 'prod-1',
-    barcode: '7501234567890',
-    name: 'Laptop HP Pavilion',
-    description: 'Laptop 15.6" Intel Core i5 8GB RAM',
-    categoryId: 'cat-1',
-    categoryName: 'Electrónica',
-    price: 899.99,
-    cost: 650.00,
-    quantity: 12,
-    minStock: 5,
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T10:30:00Z',
-  },
-  {
-    id: 'prod-2',
-    barcode: '7501234567891',
-    name: 'Mouse Inalámbrico',
-    description: 'Mouse óptico wireless USB',
-    categoryId: 'cat-1',
-    categoryName: 'Electrónica',
-    price: 25.99,
-    cost: 12.00,
-    quantity: 45,
-    minStock: 10,
-    createdAt: '2024-01-10T08:00:00Z',
-    updatedAt: '2024-01-10T08:00:00Z',
-  },
-  {
-    id: 'prod-3',
-    barcode: '7501234567892',
-    name: 'Camisa Manga Larga',
-    description: 'Camisa de algodón para hombre',
-    categoryId: 'cat-2',
-    categoryName: 'Ropa',
-    price: 49.99,
-    cost: 20.00,
-    quantity: 30,
-    minStock: 8,
-    createdAt: '2024-02-01T12:00:00Z',
-    updatedAt: '2024-02-01T12:00:00Z',
-  },
-  {
-    id: 'prod-4',
-    barcode: '7501234567893',
-    name: 'Pantalón Jeans',
-    description: 'Pantalón denim hombre',
-    categoryId: 'cat-2',
-    categoryName: 'Ropa',
-    price: 59.99,
-    cost: 25.00,
-    quantity: 3,
-    minStock: 5,
-    createdAt: '2024-02-05T14:30:00Z',
-    updatedAt: '2024-02-05T14:30:00Z',
-  },
-  {
-    id: 'prod-5',
-    barcode: '7501234567894',
-    name: 'Arroz Premium 1kg',
-    description: 'Arroz blanco de alta calidad',
-    categoryId: 'cat-3',
-    categoryName: 'Alimentos',
-    price: 4.99,
-    cost: 2.50,
-    quantity: 100,
-    minStock: 20,
-    createdAt: '2024-01-20T09:00:00Z',
-    updatedAt: '2024-01-20T09:00:00Z',
-  },
-  {
-    id: 'prod-6',
-    barcode: '7501234567895',
-    name: 'Aceite Oliva 500ml',
-    description: 'Aceite de oliva extra virgen',
-    categoryId: 'cat-3',
-    categoryName: 'Alimentos',
-    price: 12.99,
-    cost: 7.00,
-    quantity: 2,
-    minStock: 6,
-    createdAt: '2024-01-25T11:00:00Z',
-    updatedAt: '2024-01-25T11:00:00Z',
-  },
-  {
-    id: 'prod-7',
-    barcode: '7501234567896',
-    name: 'Juego Sábanas',
-    description: 'Juego de sábanas 4 piezas',
-    categoryId: 'cat-4',
-    categoryName: 'Hogar',
-    price: 79.99,
-    cost: 40.00,
-    quantity: 15,
-    minStock: 5,
-    createdAt: '2024-02-10T10:00:00Z',
-    updatedAt: '2024-02-10T10:00:00Z',
-  },
-  {
-    id: 'prod-8',
-    barcode: '7501234567897',
-    name: 'Balanza Digital',
-    description: 'Balanza para cocina digital',
-    categoryId: 'cat-4',
-    categoryName: 'Hogar',
-    price: 19.99,
-    cost: 8.00,
-    quantity: 8,
-    minStock: 4,
-    createdAt: '2024-02-12T13:00:00Z',
-    updatedAt: '2024-02-12T13:00:00Z',
-  },
-  {
-    id: 'prod-9',
-    barcode: '7501234567898',
-    name: 'Balón Fútbol',
-    description: 'Balón de fútbol profesional',
-    categoryId: 'cat-5',
-    categoryName: 'Deportes',
-    price: 34.99,
-    cost: 15.00,
-    quantity: 20,
-    minStock: 5,
-    createdAt: '2024-02-15T09:30:00Z',
-    updatedAt: '2024-02-15T09:30:00Z',
-  },
-  {
-    id: 'prod-10',
-    barcode: '7501234567899',
-    name: 'Raqueta Tenis',
-    description: 'Raqueta de tenis profesional',
-    categoryId: 'cat-5',
-    categoryName: 'Deportes',
-    price: 89.99,
-    cost: 45.00,
-    quantity: 5,
-    minStock: 3,
-    createdAt: '2024-02-18T15:00:00Z',
-    updatedAt: '2024-02-18T15:00:00Z',
-  },
-  {
-    id: 'prod-11',
-    barcode: '7501234567900',
-    name: 'Auriculares Bluetooth',
-    description: 'Auriculares wireless con micrófono',
-    categoryId: 'cat-1',
-    categoryName: 'Electrónica',
-    price: 59.99,
-    cost: 30.00,
-    quantity: 6,
-    minStock: 8,
-    createdAt: '2024-02-20T10:00:00Z',
-    updatedAt: '2024-02-20T10:00:00Z',
-  },
-  {
-    id: 'prod-12',
-    barcode: '7501234567901',
-    name: 'Zapatillas Running',
-    description: 'Zapatillas para correr profesionales',
-    categoryId: 'cat-5',
-    categoryName: 'Deportes',
-    price: 119.99,
-    cost: 60.00,
-    quantity: 4,
-    minStock: 4,
-    createdAt: '2024-02-22T11:30:00Z',
-    updatedAt: '2024-02-22T11:30:00Z',
-  },
-];
+interface ApiProduct {
+  id: number;
+  barcode: string;
+  name: string;
+  description?: string;
+  category_id: number;
+  category_name: string;
+  price: number;
+  cost: number;
+  quantity: number;
+  min_stock: number;
+  created_at: string;
+  updated_at?: string;
+  stock_status: 'good' | 'warning' | 'critical';
+}
+
+interface ApiPagination {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+interface ApiProductsResponse {
+  data: ApiProduct[];
+  pagination: ApiPagination;
+}
+
+interface ApiStats {
+  total_products: number;
+  total_quantity: number;
+  total_value: number;
+  stock_status: {
+    good: number;
+    warning: number;
+    critical: number;
+  };
+  category_summary: Array<{
+    category_id: number;
+    category_name: string;
+    product_count: number;
+    total_quantity: number;
+    total_value: number;
+  }>;
+}
+
+// Funciones helper para convertir tipos de la API a tipos del frontend
+function mapApiCategoryToCategory(apiCategory: ApiCategory): Category {
+  return {
+    id: String(apiCategory.id),
+    name: apiCategory.name,
+    description: apiCategory.description,
+  };
+}
+
+function mapApiProductToProduct(apiProduct: ApiProduct): Product {
+  return {
+    id: String(apiProduct.id),
+    barcode: apiProduct.barcode,
+    name: apiProduct.name,
+    description: apiProduct.description,
+    categoryId: String(apiProduct.category_id),
+    categoryName: apiProduct.category_name,
+    price: Number(apiProduct.price),
+    cost: Number(apiProduct.cost),
+    quantity: apiProduct.quantity,
+    minStock: apiProduct.min_stock,
+    createdAt: apiProduct.created_at,
+    updatedAt: apiProduct.updated_at || apiProduct.created_at,
+  };
+}
+
+function mapApiStatsToInventoryStats(apiStats: ApiStats): InventoryStats {
+  return {
+    totalProducts: apiStats.total_products,
+    totalQuantity: apiStats.total_quantity,
+    totalValue: apiStats.total_value,
+    stockStatus: {
+      good: apiStats.stock_status.good,
+      warning: apiStats.stock_status.warning,
+      critical: apiStats.stock_status.critical,
+    },
+    categorySummary: apiStats.category_summary.map((cat) => ({
+      categoryId: String(cat.category_id),
+      categoryName: cat.category_name,
+      productCount: cat.product_count,
+      totalQuantity: cat.total_quantity,
+      totalValue: cat.total_value,
+    })),
+  };
+}
 
 /**
  * Estado del store de inventario
@@ -209,9 +124,13 @@ interface InventoryState {
   categories: Category[];
   isLoading: boolean;
   error: string | null;
+  // Pagination
+  currentPage: number;
+  totalPages: number;
+  totalProducts: number;
 
   // Actions
-  fetchProducts: () => Promise<void>;
+  fetchProducts: (page?: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
   fetchStats: () => Promise<InventoryStats>;
   addProduct: (product: CreateProductInput) => Promise<Product>;
@@ -219,73 +138,16 @@ interface InventoryState {
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   getProductsByCategory: (categoryId: string) => Product[];
-  getStats: () => InventoryStats;
+  getStats: () => Promise<InventoryStats>;
 }
 
 /**
- * Genera un ID único simple
- */
-function generateId(): string {
-  return `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
- * Calcula las estadísticas del inventario
- */
-function calculateStats(products: Product[]): InventoryStats {
-  const totalProducts = products.length;
-  const totalQuantity = products.reduce((sum, p) => sum + p.quantity, 0);
-  const totalValue = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
-
-  // Summary por categoría
-  const categoryMap = new Map<string, CategorySummary>();
-
-  products.forEach((product) => {
-    const existing = categoryMap.get(product.categoryId);
-    if (existing) {
-      existing.productCount += 1;
-      existing.totalValue += product.price * product.quantity;
-      existing.totalQuantity += product.quantity;
-    } else {
-      categoryMap.set(product.categoryId, {
-        categoryId: product.categoryId,
-        categoryName: product.categoryName,
-        productCount: 1,
-        totalValue: product.price * product.quantity,
-        totalQuantity: product.quantity,
-      });
-    }
-  });
-
-  // Stock status
-  let good = 0;
-  let warning = 0;
-  let critical = 0;
-
-  products.forEach((product) => {
-    const status = getStockStatus(product.quantity);
-    if (status === 'good') good++;
-    else if (status === 'warning') warning++;
-    else critical++;
-  });
-
-  return {
-    totalProducts,
-    totalQuantity,
-    totalValue,
-    categorySummary: Array.from(categoryMap.values()),
-    stockStatus: { good, warning, critical },
-  };
-}
-
-/**
- * Store de inventario con datos mock.
- * Para migrar a API real, reemplazar las funciones con llamadas HTTP.
- * 
+ * Store de inventario conectado a la API real.
+ *
  * @example
  * ```tsx
  * const { products, fetchProducts } = useInventoryStore();
- * 
+ *
  * // En componente
  * useEffect(() => { fetchProducts(); }, []);
  * ```
@@ -295,60 +157,64 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   categories: [],
   isLoading: false,
   error: null,
+  currentPage: 1,
+  totalPages: 1,
+  totalProducts: 0,
 
-  fetchProducts: async () => {
+  fetchProducts: async (page: number = 1) => {
     set({ isLoading: true, error: null });
     try {
-      // Simular delay de API
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      // TODO: Reemplazar con llamada real a API
-      // const response = await api.get('/products');
-      // set({ products: response.data });
-      set({ products: mockProducts, isLoading: false });
+      const response = await api.get<ApiProductsResponse>('/api/inventory/products', {
+        params: { page, limit: 20 },
+      });
+
+      const products = response.data.data.map(mapApiProductToProduct);
+
+      set({
+        products,
+        currentPage: response.data.pagination.page,
+        totalPages: response.data.pagination.total_pages,
+        totalProducts: response.data.pagination.total,
+        isLoading: false,
+      });
     } catch (error) {
+      console.error('Error al cargar productos:', error);
       set({ error: 'Error al cargar productos', isLoading: false });
     }
   },
 
   fetchCategories: async () => {
     try {
-      // Simular delay de API
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      // TODO: Reemplazar con llamada real a API
-      // const response = await api.get('/categories');
-      set({ categories: mockCategories });
+      const response = await api.get<ApiCategory[]>('/api/inventory/categories');
+      const categories = response.data.map(mapApiCategoryToCategory);
+      set({ categories });
     } catch (error) {
       console.error('Error al cargar categorías:', error);
+      set({ error: 'Error al cargar categorías' });
     }
   },
 
   fetchStats: async () => {
-    const { products } = get();
-    // Simular delay de API
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return calculateStats(products);
+    try {
+      const response = await api.get<ApiStats>('/api/inventory/stats');
+      return mapApiStatsToInventoryStats(response.data);
+    } catch (error) {
+      console.error('Error al cargar estadísticas:', error);
+      throw error;
+    }
   },
 
-  addProduct: async (input) => {
+  addProduct: async (input: CreateProductInput) => {
     set({ isLoading: true, error: null });
     try {
-      // Simular delay de API
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      const category = get().categories.find((c) => c.id === input.categoryId);
-      const now = new Date().toISOString();
-
-      const newProduct: Product = {
-        id: generateId(),
+      // Convertir categoryId de string a número
+      const productData = {
         ...input,
-        categoryName: category?.name || 'Sin categoría',
-        createdAt: now,
-        updatedAt: now,
+        category_id: Number(input.categoryId),
       };
 
-      // TODO: Reemplazar con llamada real a API
-      // const response = await api.post('/products', input);
-      // set({ products: [...get().products, response.data] });
+      const response = await api.post<ApiProduct>('/api/inventory/products', productData);
+      const newProduct = mapApiProductToProduct(response.data);
 
       set((state) => ({
         products: [...state.products, newProduct],
@@ -362,20 +228,11 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
-  addCategory: async (input) => {
+  addCategory: async (input: CreateCategoryInput) => {
     set({ isLoading: true, error: null });
     try {
-      // Simular delay de API
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      const newCategory: Category = {
-        id: generateId(),
-        ...input,
-      };
-
-      // TODO: Reemplazar con llamada real a API
-      // const response = await api.post('/categories', input);
-      // set({ categories: [...get().categories, response.data] });
+      const response = await api.post<ApiCategory>('/api/inventory/categories', input);
+      const newCategory = mapApiCategoryToCategory(response.data);
 
       set((state) => ({
         categories: [...state.categories, newCategory],
@@ -389,20 +246,25 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
-  updateProduct: async (id, updates) => {
+  updateProduct: async (id: string, updates: Partial<Product>) => {
     set({ isLoading: true, error: null });
     try {
-      // Simular delay de API
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Convertir categoryId de string a número si existe
+      const updateData: Record<string, unknown> = { ...updates };
+      if (updates.categoryId) {
+        updateData.category_id = Number(updates.categoryId);
+        delete updateData.categoryId;
+      }
 
-      // TODO: Reemplazar con llamada real a API
-      // await api.patch(`/products/${id}`, updates);
+      const response = await api.patch<ApiProduct>(
+        `/api/inventory/products/${id}`,
+        updateData
+      );
+      const updatedProduct = mapApiProductToProduct(response.data);
 
       set((state) => ({
         products: state.products.map((p) =>
-          p.id === id
-            ? { ...p, ...updates, updatedAt: new Date().toISOString() }
-            : p
+          p.id === id ? updatedProduct : p
         ),
         isLoading: false,
       }));
@@ -412,14 +274,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
-  deleteProduct: async (id) => {
+  deleteProduct: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      // Simular delay de API
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // TODO: Reemplazar con llamada real a API
-      // await api.delete(`/products/${id}`);
+      await api.delete(`/api/inventory/products/${id}`);
 
       set((state) => ({
         products: state.products.filter((p) => p.id !== id),
@@ -431,11 +289,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
-  getProductsByCategory: (categoryId) => {
+  getProductsByCategory: (categoryId: string) => {
     return get().products.filter((p) => p.categoryId === categoryId);
   },
 
-  getStats: () => {
-    return calculateStats(get().products);
+  getStats: async () => {
+    try {
+      const response = await api.get<ApiStats>('/api/inventory/stats');
+      return mapApiStatsToInventoryStats(response.data);
+    } catch (error) {
+      console.error('Error al obtener estadísticas:', error);
+      // Return default stats if API fails
+      return {
+        totalProducts: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+        stockStatus: { good: 0, warning: 0, critical: 0 },
+        categorySummary: [],
+      };
+    }
   },
 }));

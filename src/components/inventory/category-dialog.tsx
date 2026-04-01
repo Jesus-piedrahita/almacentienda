@@ -1,9 +1,9 @@
 /**
- * @fileoverview Dialog para agregar nuevas categorías.
- * Formulario simple para crear categorías de productos.
+ * @fileoverview Dialog para agregar o editar categorías.
+ * Formulario simple para crear o modificar categorías de productos.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tag, Loader2 } from 'lucide-react';
 
 import {
@@ -17,46 +17,67 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { CreateCategoryInput } from '@/types/inventory';
-import { useAddCategory } from '@/hooks/use-inventory';
+import type { Category, CreateCategoryInput } from '@/types/inventory';
+import { useAddCategory, useUpdateCategory } from '@/hooks/use-inventory';
 
-interface AddCategoryDialogProps {
+interface CategoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  category?: Category | null;
 }
 
+type CategoryFormData = CreateCategoryInput;
+
 /**
- * AddCategoryDialog - Dialog para agregar nuevas categorías.
+ * CategoryDialog - Dialog para agregar o editar categorías.
  *
  * Incluye:
- * - Campos: nombre, descripción
+ * - Modo agregar: campos vacíos
+ * - Modo editar: campos precargados con datos de la categoría
  * - Validación de campos requeridos
  * - Estados de carga y error
  *
  * @example
  * ```tsx
- * <AddCategoryDialog
- *   open={isOpen}
- *   onOpenChange={setIsOpen}
- * />
+ * // Para agregar
+ * <CategoryDialog open={isOpen} onOpenChange={setIsOpen} />
+ * 
+ * // Para editar
+ * <CategoryDialog open={isOpen} onOpenChange={setIsOpen} category={selectedCategory} />
  * ```
  */
-export function AddCategoryDialog({
+export function CategoryDialog({
   open,
   onOpenChange,
-}: AddCategoryDialogProps) {
+  category,
+}: CategoryDialogProps) {
   const addCategoryMutation = useAddCategory();
+  const updateCategoryMutation = useUpdateCategory();
 
-  const [formData, setFormData] = useState<CreateCategoryInput>({
+  const isEditMode = !!category;
+  const isLoading = addCategoryMutation.isPending || updateCategoryMutation.isPending;
+
+  const [formData, setFormData] = useState<CategoryFormData>({
     name: '',
     description: '',
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof CreateCategoryInput, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof CategoryFormData, string>>>({});
 
-  const isLoading = addCategoryMutation.isPending;
+  // Cargar datos cuando se abre en modo edición
+  useEffect(() => {
+    if (category && open) {
+      setFormData({
+        name: category.name,
+        description: category.description || '',
+      });
+    } else if (!open) {
+      // Resetear al cerrar
+      resetForm();
+    }
+  }, [category, open]);
 
-  const handleChange = (field: keyof CreateCategoryInput, value: string) => {
+  const handleChange = (field: keyof CategoryFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Limpiar error del campo cuando el usuario escribe
     if (errors[field]) {
@@ -65,7 +86,7 @@ export function AddCategoryDialog({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof CreateCategoryInput, string>> = {};
+    const newErrors: Partial<Record<keyof CategoryFormData, string>> = {};
 
     if (!formData.name.trim()) {
       newErrors.name = 'El nombre es requerido';
@@ -83,12 +104,19 @@ export function AddCategoryDialog({
     }
 
     try {
-      await addCategoryMutation.mutateAsync(formData);
+      if (isEditMode && category) {
+        await updateCategoryMutation.mutateAsync({
+          id: category.id,
+          updates: formData,
+        });
+      } else {
+        await addCategoryMutation.mutateAsync(formData);
+      }
       // Resetear formulario y cerrar
       resetForm();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error al agregar categoría:', error);
+      console.error(isEditMode ? 'Error al actualizar categoría:' : 'Error al agregar categoría:', error);
     }
   };
 
@@ -107,25 +135,31 @@ export function AddCategoryDialog({
     onOpenChange(isOpen);
   };
 
+  const dialogTitle = isEditMode ? 'Editar Categoría' : 'Agregar Categoría';
+  const dialogDescription = isEditMode
+    ? 'Modifica los datos de la categoría.'
+    : 'Crea una nueva categoría para organizar tus productos.';
+  const buttonText = isEditMode ? 'Guardar Cambios' : 'Agregar Categoría';
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="size-5 text-primary" />
-            Agregar Categoría
+            {dialogTitle}
           </DialogTitle>
           <DialogDescription>
-            Crea una nueva categoría para organizar tus productos.
+            {dialogDescription}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nombre de la categoría */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre de Categoría *</Label>
+            <Label htmlFor="category-name">Nombre de Categoría *</Label>
             <Input
-              id="name"
+              id="category-name"
               placeholder="Ej: Electrónica, Ropa, Alimentos..."
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
@@ -138,9 +172,9 @@ export function AddCategoryDialog({
 
           {/* Descripción */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="category-description">Descripción</Label>
             <Input
-              id="description"
+              id="category-description"
               placeholder="Descripción breve de la categoría"
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
@@ -164,7 +198,7 @@ export function AddCategoryDialog({
                   Guardando...
                 </>
               ) : (
-                'Agregar Categoría'
+                buttonText
               )}
             </Button>
           </DialogFooter>

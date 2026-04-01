@@ -23,6 +23,8 @@ import { cn } from '@/lib/utils';
 interface ProductsTableProps {
   products: Product[];
   isLoading: boolean;
+  onEdit?: (product: Product) => void;
+  onDelete?: (product: Product) => void;
 }
 
 /**
@@ -51,7 +53,7 @@ const ITEMS_PER_PAGE = 10;
  * <ProductsTable products={products} isLoading={false} />
  * ```
  */
-export function ProductsTable({ products, isLoading }: ProductsTableProps) {
+export function ProductsTable({ products, isLoading, onEdit, onDelete }: ProductsTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -154,10 +156,22 @@ export function ProductsTable({ products, isLoading }: ProductsTableProps) {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="size-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="size-8"
+                        onClick={() => onEdit?.(product)}
+                        disabled={!onEdit}
+                      >
                         <Edit className="size-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="size-8 text-destructive hover:text-destructive"
+                        onClick={() => onDelete?.(product)}
+                        disabled={!onDelete}
+                      >
                         <Trash2 className="size-4" />
                       </Button>
                     </div>

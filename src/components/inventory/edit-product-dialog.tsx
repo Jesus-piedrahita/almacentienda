@@ -1,9 +1,9 @@
 /**
- * @fileoverview Dialog para agregar nuevos productos al inventario.
- * Formulario con validación para crear productos.
+ * @fileoverview Dialog para editar productos existentes del inventario.
+ * Formulario con datos precargados para modificar productos.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 
 import {
@@ -17,40 +17,43 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Category, CreateProductInput } from '@/types/inventory';
-import { useAddProduct } from '@/hooks/use-inventory';
+import type { Category, Product, UpdateProductInput } from '@/types/inventory';
+import { useUpdateProduct } from '@/hooks/use-inventory';
 
-interface AddProductDialogProps {
+interface EditProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: Category[];
+  product: Product | null;
 }
 
 /**
- * AddProductDialog - Dialog para agregar nuevos productos.
+ * EditProductDialog - Dialog para editar productos existentes.
  *
  * Incluye:
- * - Campos: nombre, descripción, codigo de barras, categoría, precio, costo, cantidad, stock mínimo
+ * - Campos precargados con datos del producto
  * - Validación de campos requeridos
  * - Estados de carga y error
  *
  * @example
  * ```tsx
- * <AddProductDialog
+ * <EditProductDialog
  *   open={isOpen}
  *   onOpenChange={setIsOpen}
  *   categories={categories}
+ *   product={selectedProduct}
  * />
  * ```
  */
-export function AddProductDialog({
+export function EditProductDialog({
   open,
   onOpenChange,
   categories,
-}: AddProductDialogProps) {
-  const addProductMutation = useAddProduct();
+  product,
+}: EditProductDialogProps) {
+  const updateProductMutation = useUpdateProduct();
 
-  const [formData, setFormData] = useState<CreateProductInput>({
+  const [formData, setFormData] = useState<UpdateProductInput>({
     barcode: '',
     name: '',
     description: '',
@@ -61,11 +64,27 @@ export function AddProductDialog({
     minStock: 5,
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof CreateProductInput, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof UpdateProductInput, string>>>({});
 
-  const isLoading = addProductMutation.isPending;
+  const isLoading = updateProductMutation.isPending;
 
-  const handleChange = (field: keyof CreateProductInput, value: string | number) => {
+  // Cargar datos del producto cuando se abre el dialog
+  useEffect(() => {
+    if (product && open) {
+      setFormData({
+        barcode: product.barcode,
+        name: product.name,
+        description: product.description || '',
+        categoryId: product.categoryId,
+        price: product.price,
+        cost: product.cost,
+        quantity: product.quantity,
+        minStock: product.minStock,
+      });
+    }
+  }, [product, open]);
+
+  const handleChange = (field: keyof UpdateProductInput, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Limpiar error del campo cuando el usuario escribe
     if (errors[field]) {
@@ -74,27 +93,27 @@ export function AddProductDialog({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof CreateProductInput, string>> = {};
+    const newErrors: Partial<Record<keyof UpdateProductInput, string>> = {};
 
-    if (!formData.barcode.trim()) {
+    if (!formData.barcode?.trim()) {
       newErrors.barcode = 'El código de barras es requerido';
     }
-    if (!formData.name.trim()) {
+    if (!formData.name?.trim()) {
       newErrors.name = 'El nombre es requerido';
     }
     if (!formData.categoryId) {
       newErrors.categoryId = 'La categoría es requerida';
     }
-    if (formData.price <= 0) {
+    if (!formData.price || formData.price <= 0) {
       newErrors.price = 'El precio debe ser mayor a 0';
     }
-    if (formData.cost < 0) {
+    if (formData.cost && formData.cost < 0) {
       newErrors.cost = 'El costo no puede ser negativo';
     }
-    if (formData.quantity < 0) {
+    if (formData.quantity && formData.quantity < 0) {
       newErrors.quantity = 'La cantidad no puede ser negativa';
     }
-    if (formData.minStock < 0) {
+    if (formData.minStock && formData.minStock < 0) {
       newErrors.minStock = 'El stock mínimo no puede ser negativo';
     }
 
@@ -105,40 +124,30 @@ export function AddProductDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!product || !validateForm()) {
       return;
     }
 
     try {
-      await addProductMutation.mutateAsync(formData);
-      // Resetear formulario y cerrar
-      resetForm();
+      await updateProductMutation.mutateAsync({ id: product.id, updates: formData });
+      // Cerrar dialog
       onOpenChange(false);
     } catch (error) {
-      console.error('Error al agregar producto:', error);
+      console.error('Error al actualizar producto:', error);
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      barcode: '',
-      name: '',
-      description: '',
-      categoryId: '',
-      price: 0,
-      cost: 0,
-      quantity: 0,
-      minStock: 5,
-    });
-    setErrors({});
   };
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      resetForm();
+      setErrors({});
     }
     onOpenChange(isOpen);
   };
+
+  // Si no hay producto, no renderizar nada
+  if (!product) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -146,10 +155,10 @@ export function AddProductDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="size-5 text-primary" />
-            Agregar Producto
+            Editar Producto
           </DialogTitle>
           <DialogDescription>
-            Completa los datos del nuevo producto para agregarlo al inventario.
+            Modifica los datos del producto en el inventario.
           </DialogDescription>
         </DialogHeader>
 
@@ -157,9 +166,9 @@ export function AddProductDialog({
           {/* Fila 1: Código de Barras y Nombre */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="barcode">Código de Barras *</Label>
+              <Label htmlFor="edit-barcode">Código de Barras *</Label>
               <Input
-                id="barcode"
+                id="edit-barcode"
                 placeholder="Ej: 7501234567890"
                 value={formData.barcode}
                 onChange={(e) => handleChange('barcode', e.target.value)}
@@ -171,9 +180,9 @@ export function AddProductDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre *</Label>
+              <Label htmlFor="edit-name">Nombre *</Label>
               <Input
-                id="name"
+                id="edit-name"
                 placeholder="Nombre del producto"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
@@ -187,9 +196,9 @@ export function AddProductDialog({
 
           {/* Fila 2: Descripción */}
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="edit-description">Descripción</Label>
             <Input
-              id="description"
+              id="edit-description"
               placeholder="Descripción breve del producto"
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
@@ -199,9 +208,9 @@ export function AddProductDialog({
 
           {/* Fila 3: Categoría */}
           <div className="space-y-2">
-            <Label htmlFor="category">Categoría *</Label>
+            <Label htmlFor="edit-category">Categoría *</Label>
             <select
-              id="category"
+              id="edit-category"
               className="flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={formData.categoryId}
               onChange={(e) => handleChange('categoryId', e.target.value)}
@@ -222,9 +231,9 @@ export function AddProductDialog({
           {/* Fila 4: Precio y Costo */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Precio (MXN) *</Label>
+              <Label htmlFor="edit-price">Precio (MXN) *</Label>
               <Input
-                id="price"
+                id="edit-price"
                 type="number"
                 step="0.01"
                 min="0"
@@ -239,9 +248,9 @@ export function AddProductDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cost">Costo (MXN)</Label>
+              <Label htmlFor="edit-cost">Costo (MXN)</Label>
               <Input
-                id="cost"
+                id="edit-cost"
                 type="number"
                 step="0.01"
                 min="0"
@@ -259,9 +268,9 @@ export function AddProductDialog({
           {/* Fila 5: Cantidad y Stock Mínimo */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="quantity">Cantidad *</Label>
+              <Label htmlFor="edit-quantity">Cantidad *</Label>
               <Input
-                id="quantity"
+                id="edit-quantity"
                 type="number"
                 min="0"
                 placeholder="0"
@@ -275,9 +284,9 @@ export function AddProductDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="minStock">Stock Mínimo</Label>
+              <Label htmlFor="edit-minStock">Stock Mínimo</Label>
               <Input
-                id="minStock"
+                id="edit-minStock"
                 type="number"
                 min="0"
                 placeholder="5"
@@ -307,7 +316,7 @@ export function AddProductDialog({
                   Guardando...
                 </>
               ) : (
-                'Agregar Producto'
+                'Guardar Cambios'
               )}
             </Button>
           </DialogFooter>
