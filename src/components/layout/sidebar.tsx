@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   Store,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,11 @@ const navItems = [
     label: "Inventario",
     href: "/inventory",
     icon: Package,
+  },
+  {
+    label: "Clientes",
+    href: "/clients",
+    icon: Users,
   },
   {
     label: "Ventas",

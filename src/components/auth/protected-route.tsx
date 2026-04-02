@@ -33,7 +33,13 @@ interface ProtectedRouteProps {
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
   const location = useLocation();
+
+  // Si no está inicializado, no mostrar nada aún (evitar flash)
+  if (!isInitialized) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     // Redirigir a /login pero guardar la ubicación actual

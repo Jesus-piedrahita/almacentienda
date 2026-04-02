@@ -18,6 +18,8 @@ interface AuthState {
   token: string | null;
   /** Indica si el usuario está autenticado */
   isAuthenticated: boolean;
+  /** Indica si el estado ha sido inicializado desde localStorage */
+  isInitialized: boolean;
 
   // Actions
   /** Establece el token y usuario */
@@ -49,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      isInitialized: false,
 
       setAuth: (token: string, user: UserResponse) => {
         // Also store in localStorage for axios interceptor
@@ -59,6 +62,7 @@ export const useAuthStore = create<AuthState>()(
           token,
           user,
           isAuthenticated: true,
+          isInitialized: true,
         });
       },
 
@@ -70,6 +74,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           token: null,
           isAuthenticated: false,
+          isInitialized: true,
         });
       },
 
@@ -84,19 +89,23 @@ export const useAuthStore = create<AuthState>()(
               token,
               user,
               isAuthenticated: true,
+              isInitialized: true,
             });
           } catch {
             // Invalid data in localStorage, clear it
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
+            set({ isInitialized: true });
           }
+        } else {
+          set({ isInitialized: true });
         }
       },
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      // Only persist token and user, isAuthenticated is derived
+      // Only persist token and user, isAuthenticated and isInitialized are derived
       partialize: (state) => ({
         token: state.token,
         user: state.user,
