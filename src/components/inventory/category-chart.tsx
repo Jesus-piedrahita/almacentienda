@@ -1,6 +1,7 @@
 /**
  * @fileoverview Componente de gráfico de distribución por categoría.
  * Muestra visualmente la cantidad de productos por categoría usando barras horizontales.
+ * Soporta estado de carga (skeleton) para evitar el mensaje vacío falso durante la carga inicial.
  */
 
 import { cn } from '@/lib/utils';
@@ -8,6 +9,8 @@ import type { CategorySummary } from '@/types/inventory';
 
 interface CategoryChartProps {
   categories: CategorySummary[];
+  /** Indica si los datos están siendo cargados por primera vez */
+  isLoading: boolean;
 }
 
 /**
@@ -47,12 +50,43 @@ function formatCurrency(value: number): string {
  * - Cantidad de productos
  * - Valor total de esa categoría
  *
+ * Durante la carga inicial muestra un skeleton para evitar el falso empty state.
+ *
  * @example
  * ```tsx
- * <CategoryChart categories={[{ categoryId: '1', categoryName: 'Electrónica', productCount: 10, totalValue: 5000, totalQuantity: 50 }]} />
+ * <CategoryChart categories={[{ categoryId: '1', categoryName: 'Electrónica', productCount: 10, totalValue: 5000, totalQuantity: 50 }]} isLoading={false} />
  * ```
  */
-export function CategoryChart({ categories }: CategoryChartProps) {
+export function CategoryChart({ categories, isLoading }: CategoryChartProps) {
+  // Estado de carga inicial: mostrar skeleton para evitar el falso "No hay categorías"
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="space-y-2">
+            {/* Línea de nombre y valor skeleton */}
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+            </div>
+            {/* Barra principal skeleton */}
+            <div className="h-6 w-full animate-pulse rounded-md bg-muted" />
+            {/* Barra secundaria skeleton */}
+            <div className="h-3 w-4/5 animate-pulse rounded-full bg-muted/50" />
+          </div>
+        ))}
+
+        {/* Línea de total skeleton */}
+        <div className="mt-4 border-t pt-4">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-10 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (categories.length === 0) {
     return (
       <div className="flex h-40 items-center justify-center text-muted-foreground">

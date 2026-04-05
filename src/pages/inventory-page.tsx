@@ -47,7 +47,12 @@ export function InventoryPage() {
   // Queries con React Query
   const { data: productsData, isLoading: isLoadingProducts } = useProducts(1);
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
-  const { data: stats, isLoading: isLoadingStats } = useInventoryStats();
+  const {
+    data: stats,
+    isLoading: isLoadingStats,
+    isError: isStatsError,
+    refetch: refetchStats,
+  } = useInventoryStats();
   
   // Mutations
   const deleteProductMutation = useDeleteProduct();
@@ -55,7 +60,9 @@ export function InventoryPage() {
 
   // Productos del query
   const products = productsData?.data ?? [];
-  const isLoading = isLoadingProducts || isLoadingCategories || isLoadingStats;
+  // isLoading solo es true en la carga inicial (sin cache); isFetching cubriría background refetch
+  const isLoadingStats_initial = isLoadingStats;
+  const isLoading = isLoadingProducts || isLoadingCategories || isLoadingStats_initial;
 
   // Handlers para editar y eliminar productos
   const handleEditProduct = (product: Product) => {
@@ -65,7 +72,7 @@ export function InventoryPage() {
 
   const handleDeleteProduct = async (product: Product) => {
     const confirmed = await confirmDelete(product.name);
-    
+
     if (confirmed) {
       try {
         await deleteProductMutation.mutateAsync(product.id);
@@ -96,7 +103,7 @@ export function InventoryPage() {
 
   const handleDeleteCategory = async (category: Category) => {
     const confirmed = await confirmDelete(category.name);
-    
+
     if (confirmed) {
       try {
         await deleteCategoryMutation.mutateAsync(category.id);
@@ -150,6 +157,9 @@ export function InventoryPage() {
               good={stats?.stockStatus.good ?? 0}
               warning={stats?.stockStatus.warning ?? 0}
               critical={stats?.stockStatus.critical ?? 0}
+              isLoading={isLoadingStats_initial}
+              isError={isStatsError}
+              onRetry={refetchStats}
             />
           </CardContent>
         </Card>
@@ -163,7 +173,10 @@ export function InventoryPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <CategoryChart categories={stats?.categorySummary ?? []} />
+            <CategoryChart
+              categories={stats?.categorySummary ?? []}
+              isLoading={isLoadingStats_initial}
+            />
           </CardContent>
         </Card>
       </div>

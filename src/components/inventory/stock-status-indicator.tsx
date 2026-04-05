@@ -1,11 +1,13 @@
 /**
  * @fileoverview Componente indicador visual del estado del stock.
  * Muestra visualmente los productos en estado: Bien (azul), Alerta (amarillo), Crítico (rojo).
+ * Soporta estado de carga (skeleton), estado de error con retry y el estado vacío real.
  */
 
-import { CheckCircle, AlertTriangle, XCircle, TrendingDown } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, TrendingDown, RefreshCw } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface StockStatusIndicatorProps {
@@ -15,6 +17,12 @@ interface StockStatusIndicatorProps {
   warning: number;
   /** Productos con stock <= 4 (Crítico) */
   critical: number;
+  /** Indica si los datos están siendo cargados por primera vez */
+  isLoading: boolean;
+  /** Indica si la carga de datos falló */
+  isError?: boolean;
+  /** Callback para reintentar la carga de datos */
+  onRetry?: () => void;
 }
 
 /**
@@ -39,13 +47,75 @@ function getPercentages(good: number, warning: number, critical: number) {
  * - Rojo: Crítico (<= 4 unidades)
  *
  * También muestra las tarjetas individuales con conteos.
+ * Durante la carga inicial muestra un skeleton placeholder.
+ * Ante errores muestra un mensaje con botón de retry.
  *
  * @example
  * ```tsx
- * <StockStatusIndicator good={15} warning={3} critical={2} />
+ * <StockStatusIndicator good={15} warning={3} critical={2} isLoading={false} />
  * ```
  */
-export function StockStatusIndicator({ good, warning, critical }: StockStatusIndicatorProps) {
+export function StockStatusIndicator({
+  good,
+  warning,
+  critical,
+  isLoading,
+  isError = false,
+  onRetry,
+}: StockStatusIndicatorProps) {
+  // Estado de carga inicial: mostrar skeleton
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {/* Barra de progreso skeleton */}
+        <div className="h-4 w-full animate-pulse rounded-full bg-muted" />
+
+        {/* Grid de 3 cards skeleton */}
+        <div className="grid grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-3">
+                <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+                <div className="mt-2 h-6 w-8 animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Línea contextual skeleton */}
+        <div className="h-4 w-48 animate-pulse rounded bg-muted" />
+      </div>
+    );
+  }
+
+  // Estado de error: mostrar mensaje con retry
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
+        <XCircle className="size-8 text-red-500" />
+        <div>
+          <p className="text-sm font-medium text-red-600">
+            No se pudieron cargar las estadísticas
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Ocurrió un error al obtener el estado del stock
+          </p>
+        </div>
+        {onRetry && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            className="gap-2"
+          >
+            <RefreshCw className="size-4" />
+            Reintentar
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   const percentages = getPercentages(good, warning, critical);
   const total = good + warning + critical;
 
