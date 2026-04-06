@@ -5,6 +5,7 @@
 
 import { useAuthStore } from "@/stores/auth-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarcodeSearchWidget } from "@/components/dashboard/barcode-search-widget";
 
 /**
  * DashboardPage - Página principal del sistema.
@@ -89,24 +90,8 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      {/* Sección de información adicional */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Información del Sistema</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Este es el panel principal de AlmacenTienda. Utilice el menú
-            lateral para navegar entre las diferentes secciones del sistema:
-          </p>
-          <ul className="mt-4 list-inside list-disc text-sm text-muted-foreground space-y-1">
-            <li><strong>Inventario</strong> - Gestione sus productos</li>
-            <li><strong>Ventas</strong> - Controle las ventas del día</li>
-            <li><strong>Reportes</strong> - Vea estadísticas y análisis</li>
-            <li><strong>Configuración</strong> - Ajuste las opciones del sistema</li>
-          </ul>
-        </CardContent>
-      </Card>
+      {/* Widget de búsqueda por código de barras */}
+      <BarcodeSearchWidget />
     </div>
   );
 }

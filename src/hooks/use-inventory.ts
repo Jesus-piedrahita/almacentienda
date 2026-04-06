@@ -120,6 +120,7 @@ function mapApiStatsToInventoryStats(apiStats: ApiStats): InventoryStats {
 
 export const queryKeys = {
   products: (page: number) => ['products', page] as const,
+  search: (q: string) => ['products', 'search', q] as const,
   categories: ['categories'] as const,
   stats: ['inventory-stats'] as const,
 };
@@ -173,6 +174,24 @@ export function useInventoryStats() {
       return mapApiStatsToInventoryStats(response.data);
     },
     staleTime: 1000 * 60 * 2, // 2 minutos
+  });
+}
+
+/**
+ * Hook para buscar productos por código de barras o nombre.
+ * No dispara la petición si la query tiene menos de 3 caracteres.
+ */
+export function useSearchProducts(query: string) {
+  return useQuery({
+    queryKey: queryKeys.search(query),
+    queryFn: async (): Promise<Product[]> => {
+      const response = await api.get<ApiProduct[]>('/api/inventory/products/search', {
+        params: { q: query },
+      });
+      return response.data.map(mapApiProductToProduct);
+    },
+    enabled: query.length >= 3,
+    staleTime: 1000 * 30, // 30 segundos
   });
 }
 
