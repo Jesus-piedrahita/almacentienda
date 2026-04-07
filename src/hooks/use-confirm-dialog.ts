@@ -1,9 +1,57 @@
 /**
- * @fileoverview Hooks para confirmación de acciones mediante SweetAlert2.
- * Proporciona funciones reutilizables para modales de confirmación.
+ * @fileoverview API global para confirmaciones y errores.
+ *
+ * Evita manipulación directa del DOM por librerías externas (ej. sweetalert)
+ * delegando en un host React (ConfirmDialogHost).
  */
 
-import swal from 'sweetalert';
+interface ConfirmOptions {
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+}
+
+interface ErrorOptions {
+  title: string;
+  message: string;
+  buttonText?: string;
+}
+
+interface ConfirmDialogHandlers {
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
+  error: (options: ErrorOptions) => Promise<void>;
+}
+
+const defaultHandlers: ConfirmDialogHandlers = {
+  confirm: async ({ title, message, confirmText = 'Aceptar' }) => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.confirm(`${title}\n\n${message}`) && Boolean(confirmText);
+  },
+  error: async ({ title, message }) => {
+    if (typeof window !== 'undefined') {
+      window.alert(`${title}\n\n${message}`);
+    }
+  },
+};
+
+let handlers: ConfirmDialogHandlers = defaultHandlers;
+
+/**
+ * Registra los handlers del host React para dialogs.
+ */
+export function setConfirmDialogHandlers(nextHandlers: ConfirmDialogHandlers): void {
+  handlers = nextHandlers;
+}
+
+/**
+ * Restablece handlers por defecto (útil al desmontar host).
+ */
+export function resetConfirmDialogHandlers(): void {
+  handlers = defaultHandlers;
+}
 
 /**
  * Muestra un modal de confirmación para eliminar un producto.
@@ -20,15 +68,12 @@ import swal from 'sweetalert';
  * ```
  */
 export async function confirmDelete(productName: string): Promise<boolean> {
-  const result = await swal({
+  return handlers.confirm({
     title: '¿Estás seguro?',
-    text: `¿Eliminar el producto "${productName}"?\n\nEsta acción no se puede deshacer.`,
-    icon: 'warning',
-    buttons: ['Cancelar', 'Eliminar'],
-    dangerMode: true,
+    message: `¿Eliminar el producto "${productName}"?\n\nEsta acción no se puede deshacer.`,
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar',
   });
-  
-  return result === true;
 }
 
 /**
@@ -43,10 +88,9 @@ export async function confirmDelete(productName: string): Promise<boolean> {
  * ```
  */
 export async function showError(title: string, message: string): Promise<void> {
-  await swal({
+  await handlers.error({
     title,
-    text: message,
-    icon: 'error',
-    buttons: ['Aceptar'],
+    message,
+    buttonText: 'Aceptar',
   });
 }

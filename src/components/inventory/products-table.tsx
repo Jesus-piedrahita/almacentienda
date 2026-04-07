@@ -105,7 +105,8 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
           className="max-w-sm"
         />
         <span className="text-sm text-muted-foreground">
-          {filteredProducts.length} resultado{filteredProducts.length !== 1 ? 's' : ''}
+          {/* se metio todo en una sola cadena de texto para evitar problemas con nodos hijos */}
+          {`${filteredProducts.length} resultado${filteredProducts.length !== 1 ? 's' : ''}`}
         </span>
       </div>
 
@@ -187,7 +188,7 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Mostrando {startIndex + 1} a {Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length)} de {filteredProducts.length}
+            {`Mostrando ${startIndex + 1} a ${Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length)} de ${filteredProducts.length}`}
           </p>
           <div className="flex items-center gap-2">
             <Button
