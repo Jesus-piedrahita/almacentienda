@@ -5,7 +5,7 @@
  * Read-only: sin navegación ni paginación — solo consulta.
  */
 
-import { useState, useCallback, useEffect, type KeyboardEvent } from 'react';
+import { useState, useCallback, type KeyboardEvent } from 'react';
 import { Search, Loader2, AlertCircle, ScanBarcode } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,13 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'MXN',
   }).format(value);
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('es-MX', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }
 
 function stockStatusLabel(product: Product): {
@@ -111,6 +118,7 @@ function ResultsList({ products }: { products: Product[] }) {
     >
       {products.map((product) => {
         const status = stockStatusLabel(product);
+        const inventoryValue = product.price * product.quantity;
         return (
           <li
             key={product.id}
@@ -124,6 +132,16 @@ function ResultsList({ products }: { products: Product[] }) {
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {product.barcode} · {product.categoryName}
               </p>
+              {product.description && (
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {product.description}
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>Costo: {formatCurrency(product.cost)}</span>
+                <span>Stock mín.: {product.minStock}</span>
+                <span>Últ. act.: {formatDateTime(product.updatedAt)}</span>
+              </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="text-sm font-semibold text-foreground">
@@ -137,6 +155,9 @@ function ResultsList({ products }: { products: Product[] }) {
                   {status.label}
                 </Badge>
               </div>
+              <span className="text-xs text-muted-foreground">
+                Valor stock: {formatCurrency(inventoryValue)}
+              </span>
             </div>
           </li>
         );
@@ -166,22 +187,18 @@ function ResultsList({ products }: { products: Product[] }) {
 export function BarcodeSearchWidget() {
   const [inputValue, setInputValue] = useState('');
 
-  // submittedQuery es la ÚNICA fuente de verdad para la query activa.
-  // Se actualiza por dos caminos exclusivos:
-  //   1. Debounce path: cuando debouncedInputValue cambia (300ms tras el último keystroke)
-  //   2. Enter path: inmediatamente cuando el usuario presiona Enter
+  // submittedQuery conserva la última búsqueda enviada por Enter.
+  // Esto nos permite limpiar el input visible después de un escaneo sin perder
+  // la query activa que alimenta el widget de resultados.
   const [submittedQuery, setSubmittedQuery] = useState('');
 
   // Debounce del inputValue para tipeo manual
   const debouncedInputValue = useDebouncedValue(inputValue, 300);
 
-  // Camino 1: Debounce path — sincroniza submittedQuery con el valor debounced.
-  // Esto cubre el caso de tipeo manual donde el usuario no presiona Enter.
-  // Excepción: cuando el input se vacía (inputValue = ''), reseteamos submittedQuery
-  // de forma inmediata en el onChange para que el idle state aparezca sin delay.
-  useEffect(() => {
-    setSubmittedQuery(debouncedInputValue);
-  }, [debouncedInputValue]);
+  // Query efectiva:
+  // - Si el input tiene texto visible, usamos el valor debounced (tipeo manual)
+  // - Si el input está vacío, preservamos la última query enviada por Enter (scanner)
+  const searchQuery = inputValue.trim() === '' ? submittedQuery : debouncedInputValue.trim();
 
   const {
     data: products,
@@ -189,7 +206,7 @@ export function BarcodeSearchWidget() {
     isFetching,
     isError,
     refetch,
-  } = useSearchProducts(submittedQuery);
+  } = useSearchProducts(searchQuery);
 
   /**
    * Camino 2: Enter path — actualiza submittedQuery directamente con el valor
@@ -199,10 +216,16 @@ export function BarcodeSearchWidget() {
    */
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        setSubmittedQuery(inputValue);
-      }
+      if (e.key !== 'Enter') return;
+
+      e.preventDefault();
+      const query = inputValue.trim();
+      if (!query) return;
+
+      setSubmittedQuery(query);
+      // Limpiamos el input visible para que el próximo escaneo no se concatene
+      // con el código anterior.
+      setInputValue('');
     },
     [inputValue]
   );
@@ -212,7 +235,7 @@ export function BarcodeSearchWidget() {
   }, [refetch]);
 
   // Determinamos el estado actual del widget
-  const queryActive = submittedQuery.length >= 3;
+  const queryActive = searchQuery.length >= 3;
   const showLoading = queryActive && (isLoading || isFetching);
   const showError = queryActive && isError && !isFetching;
   const showResults = queryActive && !isLoading && !isFetching && !isError && Array.isArray(products) && products.length > 0;
@@ -255,7 +278,7 @@ export function BarcodeSearchWidget() {
         {showLoading && <LoadingState />}
         {showError && <ErrorState onRetry={handleRetry} />}
         {showResults && <ResultsList products={products!} />}
-        {showEmpty && <EmptyState query={submittedQuery} />}
+        {showEmpty && <EmptyState query={searchQuery} />}
       </CardContent>
     </Card>
   );

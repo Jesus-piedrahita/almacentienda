@@ -136,6 +136,32 @@ describe('DashboardPage integration', () => {
     expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
   });
 
+  it('keeps manual input on regular keys and clears it only after Enter scanner submission', () => {
+    renderDashboard();
+
+    const input = screen.getByTestId('barcode-search-input') as HTMLInputElement;
+
+    act(() => {
+      fireEvent.change(input, { target: { value: '7501234567890' } });
+    });
+    expect(input.value).toBe('7501234567890');
+
+    act(() => {
+      fireEvent.keyDown(input, { key: 'a', code: 'KeyA' });
+    });
+    expect(input.value).toBe('7501234567890');
+
+    act(() => {
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+    });
+    expect(input.value).toBe('');
+
+    act(() => {
+      fireEvent.change(input, { target: { value: '999888777666' } });
+    });
+    expect(input.value).toBe('999888777666');
+  });
+
   it('does NOT render the old "Información del Sistema" static card', () => {
     renderDashboard();
 
