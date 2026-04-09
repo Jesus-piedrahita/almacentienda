@@ -59,6 +59,7 @@ export function AddProductDialog({
     cost: 0,
     quantity: 0,
     minStock: 5,
+    expiration_date: undefined,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof CreateProductInput, string>>>({});
@@ -110,7 +111,12 @@ export function AddProductDialog({
     }
 
     try {
-      await addProductMutation.mutateAsync(formData);
+      // Normalise optional fields: convert empty strings to undefined
+      const payload: CreateProductInput = {
+        ...formData,
+        expiration_date: formData.expiration_date?.trim() || undefined,
+      };
+      await addProductMutation.mutateAsync(payload);
       // Resetear formulario y cerrar
       resetForm();
       onOpenChange(false);
@@ -129,6 +135,7 @@ export function AddProductDialog({
       cost: 0,
       quantity: 0,
       minStock: 5,
+      expiration_date: undefined,
     });
     setErrors({});
   };
@@ -289,6 +296,23 @@ export function AddProductDialog({
                 <p className="text-xs text-destructive">{errors.minStock}</p>
               )}
             </div>
+          </div>
+
+          {/* Fila 6: Fecha de Vencimiento */}
+          <div className="space-y-2">
+            <Label htmlFor="expiration_date">Fecha de Vencimiento</Label>
+            <Input
+              id="expiration_date"
+              type="date"
+              value={formData.expiration_date ?? ''}
+              onChange={(e) =>
+                handleChange('expiration_date', e.target.value || '')
+              }
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Opcional. Dejar vacío si el producto no tiene fecha de vencimiento.
+            </p>
           </div>
 
           <DialogFooter>

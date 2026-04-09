@@ -35,7 +35,14 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@/types/inventory';
-import { getStockStatus, getStockStatusLabel, getStockStatusColor } from '@/types/inventory';
+import {
+  getStockStatus,
+  getStockStatusLabel,
+  getStockStatusColor,
+  getExpirationDisplayLabel,
+  getExpirationDisplayStatus,
+  getExpirationDisplayStatusColor,
+} from '@/types/inventory';
 import { cn } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
@@ -54,6 +61,20 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'MXN',
   }).format(value);
+}
+
+/**
+ * Formatea una fecha ISO-8601 para mostrar al usuario (dd/mm/aaaa).
+ * Devuelve '—' si la cadena está vacía o es inválida.
+ */
+function formatDate(isoDate: string | undefined): string {
+  if (!isoDate) return '—';
+  // Parse YYYY-MM-DD without timezone conversion to avoid off-by-one day
+  const [year, month, day] = isoDate.split('-').map(Number);
+  if (!year || !month || !day) return '—';
+  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
+    new Date(year, month - 1, day)
+  );
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -145,6 +166,11 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
   // Sincronizar reset de página cuando el debounce propaga el nuevo valor.
   // Si la página actual excede las páginas disponibles, se clampea al mostrar.
   const safePage = Math.min(currentPage, totalPages || 1);
+  const paginatedProducts = filteredProducts.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+
+  // Mostrar columna "Vencimiento" solo si el subconjunto visible actual contiene
+  // al menos un producto con fecha de vencimiento.
+  const hasExpiration = paginatedProducts.some((product) => !!product.expiration_date);
 
   if (isLoading) {
     return (
@@ -217,13 +243,18 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
                   <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-center">Cantidad</TableHead>
                   <TableHead className="text-center">Stock</TableHead>
+                  {hasExpiration && (
+                    <TableHead className="text-center">Vencimiento</TableHead>
+                  )}
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE).map((product) => {
+                {paginatedProducts.map((product) => {
                   const status = getStockStatus(product.quantity);
                   const statusColor = getStockStatusColor(status);
+                  const expirationStatus = getExpirationDisplayStatus(product.expiration_date);
+                  const expirationStatusColor = getExpirationDisplayStatusColor(expirationStatus);
 
                   return (
                     <TableRow key={product.id}>
@@ -251,6 +282,29 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
                           {getStockStatusLabel(status)}
                         </span>
                       </TableCell>
+                      {hasExpiration && (
+                        <TableCell className="text-center">
+                          {product.expiration_date ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-xs text-foreground">
+                                {formatDate(product.expiration_date)}
+                              </span>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                                  expirationStatusColor
+                                )}
+                              >
+                                {getExpirationDisplayLabel(expirationStatus)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {getExpirationDisplayLabel(expirationStatus)}
+                            </span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button 

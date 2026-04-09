@@ -4,8 +4,9 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import api from '@/lib/api';
-import type { Product, Category, InventoryStats, CreateProductInput, CreateCategoryInput } from '@/types/inventory';
+import type { Product, Category, InventoryStats, CreateProductInput, CreateCategoryInput, ExpiringProduct } from '@/types/inventory';
 
 // ============================================================
 // Types de la API
@@ -33,6 +34,22 @@ interface ApiProduct {
   created_at: string;
   updated_at?: string;
   stock_status: 'good' | 'warning' | 'critical';
+  /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
+  expiration_date?: string;
+}
+
+/**
+ * Representación de un producto próximo a vencer tal como lo devuelve
+ * el endpoint GET /api/inventory/alerts/expiring.
+ */
+interface ApiExpiringProduct {
+  id: number;
+  name: string;
+  /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). */
+  expiration_date: string;
+  /** Días restantes hasta el vencimiento (negativo si ya venció). */
+  days_remaining: number;
+  quantity: number;
 }
 
 interface ApiPagination {
@@ -89,8 +106,19 @@ function mapApiProductToProduct(apiProduct: ApiProduct): Product {
     cost: Number(apiProduct.cost),
     quantity: apiProduct.quantity,
     minStock: apiProduct.min_stock,
+    expiration_date: apiProduct.expiration_date,
     createdAt: apiProduct.created_at,
     updatedAt: apiProduct.updated_at || apiProduct.created_at,
+  };
+}
+
+function mapApiExpiringProductToExpiringProduct(api: ApiExpiringProduct): ExpiringProduct {
+  return {
+    id: String(api.id),
+    name: api.name,
+    expiration_date: api.expiration_date,
+    days_remaining: api.days_remaining,
+    quantity: api.quantity,
   };
 }
 
@@ -123,6 +151,7 @@ export const queryKeys = {
   search: (q: string) => ['products', 'search', q] as const,
   categories: ['categories'] as const,
   stats: ['inventory-stats'] as const,
+  expiring: ['inventory-expiring'] as const,
 };
 
 // ============================================================
@@ -174,6 +203,35 @@ export function useInventoryStats() {
       return mapApiStatsToInventoryStats(response.data);
     },
     staleTime: 1000 * 60 * 2, // 2 minutos
+  });
+}
+
+/**
+ * Hook para obtener productos próximos a vencer.
+ *
+ * Llama a GET /api/inventory/alerts/expiring y devuelve la lista de productos.
+ * Si el backend responde con 404 o 501 (endpoint aún no implementado), retorna
+ * un array vacío silenciosamente para no bloquear el renderizado de la página.
+ *
+ * @returns ExpiringProduct[] — vacío si el backend no está disponible aún.
+ */
+export function useExpiringProducts() {
+  return useQuery({
+    queryKey: queryKeys.expiring,
+    queryFn: async (): Promise<ExpiringProduct[]> => {
+      try {
+        const response = await api.get<ApiExpiringProduct[]>('/api/inventory/alerts/expiring');
+        return response.data.map(mapApiExpiringProductToExpiringProduct);
+      } catch (err: unknown) {
+        // Backend not yet implemented — fail silently on 404/501
+        if (isAxiosError(err) && (err.response?.status === 404 || err.response?.status === 501)) {
+          return [];
+        }
+        throw err; // re-throw unexpected errors
+      }
+    },
+    retry: false,          // do not retry 404/501
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 

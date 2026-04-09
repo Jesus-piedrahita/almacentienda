@@ -17,7 +17,8 @@ import { CategoryList } from '@/components/inventory/category-list';
 import { AddProductDialog } from '@/components/inventory/add-product-dialog';
 import { CategoryDialog } from '@/components/inventory/category-dialog';
 import { EditProductDialog } from '@/components/inventory/edit-product-dialog';
-import { useProducts, useCategories, useInventoryStats, useDeleteProduct, useDeleteCategory } from '@/hooks/use-inventory';
+import { ExpiringProductsCard } from '@/components/inventory/expiring-products-card';
+import { useProducts, useCategories, useInventoryStats, useDeleteProduct, useDeleteCategory, useExpiringProducts } from '@/hooks/use-inventory';
 import { confirmDelete, showError } from '@/hooks/use-confirm-dialog';
 import type { Product, Category } from '@/types/inventory';
 
@@ -53,6 +54,7 @@ export function InventoryPage() {
     isError: isStatsError,
     refetch: refetchStats,
   } = useInventoryStats();
+  const { data: expiringProducts = [] } = useExpiringProducts();
   
   // Mutations
   const deleteProductMutation = useDeleteProduct();
@@ -141,6 +143,9 @@ export function InventoryPage() {
 
       {/* Tarjetas de estadísticas */}
       <InventoryStatsCards stats={stats ?? null} isLoading={isLoading} />
+
+      {/* Resumen simple de vencimientos (oculto si no hay productos con fecha) */}
+      <ExpiringProductsCard products={expiringProducts} />
 
       {/* Estado del stock y gráfico por categoría */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -241,6 +246,7 @@ export function InventoryPage() {
       {/* Dialog para editar producto */}
       {selectedProduct && (
         <EditProductDialog
+          key={selectedProduct.id}
           open={isEditDialogOpen}
           onOpenChange={handleEditDialogClose}
           categories={categories ?? []}

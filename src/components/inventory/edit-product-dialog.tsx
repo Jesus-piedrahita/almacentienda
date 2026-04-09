@@ -3,7 +3,7 @@
  * Formulario con datos precargados para modificar productos.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 
 import {
@@ -53,36 +53,38 @@ export function EditProductDialog({
 }: EditProductDialogProps) {
   const updateProductMutation = useUpdateProduct();
 
-  const [formData, setFormData] = useState<UpdateProductInput>({
-    barcode: '',
-    name: '',
-    description: '',
-    categoryId: '',
-    price: 0,
-    cost: 0,
-    quantity: 0,
-    minStock: 5,
-  });
+  // Derivar el estado inicial a partir del producto seleccionado.
+  // Se usa `product` como fuente de verdad para inicializar el formulario;
+  // el componente se remonta (vía `key={product?.id}`) cada vez que cambia el producto,
+  // evitando la necesidad de un efecto secundario para re-sincronizar el estado.
+  const [formData, setFormData] = useState<UpdateProductInput>(() =>
+    product
+      ? {
+          barcode: product.barcode,
+          name: product.name,
+          description: product.description || '',
+          categoryId: product.categoryId,
+          price: product.price,
+          cost: product.cost,
+          quantity: product.quantity,
+          minStock: product.minStock,
+          expiration_date: product.expiration_date,
+        }
+      : {
+          barcode: '',
+          name: '',
+          description: '',
+          categoryId: '',
+          price: 0,
+          cost: 0,
+          quantity: 0,
+          minStock: 5,
+        }
+  );
 
   const [errors, setErrors] = useState<Partial<Record<keyof UpdateProductInput, string>>>({});
 
   const isLoading = updateProductMutation.isPending;
-
-  // Cargar datos del producto cuando se abre el dialog
-  useEffect(() => {
-    if (product && open) {
-      setFormData({
-        barcode: product.barcode,
-        name: product.name,
-        description: product.description || '',
-        categoryId: product.categoryId,
-        price: product.price,
-        cost: product.cost,
-        quantity: product.quantity,
-        minStock: product.minStock,
-      });
-    }
-  }, [product, open]);
 
   const handleChange = (field: keyof UpdateProductInput, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -129,7 +131,12 @@ export function EditProductDialog({
     }
 
     try {
-      await updateProductMutation.mutateAsync({ id: product.id, updates: formData });
+      // Normalise optional fields: convert empty strings to undefined
+      const updates: typeof formData = {
+        ...formData,
+        expiration_date: formData.expiration_date?.trim() || undefined,
+      };
+      await updateProductMutation.mutateAsync({ id: product.id, updates });
       // Cerrar dialog
       onOpenChange(false);
     } catch (error) {
@@ -298,6 +305,23 @@ export function EditProductDialog({
                 <p className="text-xs text-destructive">{errors.minStock}</p>
               )}
             </div>
+          </div>
+
+          {/* Fila 6: Fecha de Vencimiento */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-expiration_date">Fecha de Vencimiento</Label>
+            <Input
+              id="edit-expiration_date"
+              type="date"
+              value={formData.expiration_date ?? ''}
+              onChange={(e) =>
+                handleChange('expiration_date', e.target.value || '')
+              }
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Opcional. Dejar vacío si el producto no tiene fecha de vencimiento.
+            </p>
           </div>
 
           <DialogFooter>

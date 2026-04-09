@@ -39,6 +39,8 @@ export interface Product {
   cost: number;
   quantity: number;
   minStock: number; // Stock mínimo para alerta
+  /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
+  expiration_date?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +83,8 @@ export interface CreateProductInput {
   cost: number;
   quantity: number;
   minStock: number;
+  /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
+  expiration_date?: string;
 }
 
 /**
@@ -95,6 +99,8 @@ export interface UpdateProductInput {
   cost?: number;
   quantity?: number;
   minStock?: number;
+  /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
+  expiration_date?: string;
 }
 
 /**
@@ -137,5 +143,103 @@ export function getStockStatusLabel(status: StockStatus): string {
       return 'Alerta';
     case 'critical':
       return 'Crítico';
+  }
+}
+
+// ============================================================
+// Expiration types + helpers
+// ============================================================
+
+/**
+ * Const map de estados de visualización de vencimiento.
+ *
+ * Esta UI usa la opción simple aprobada por producto:
+ * - `Vencido`
+ * - `Con fecha`
+ * - `Sin vencimiento`
+ */
+export const EXPIRATION_DISPLAY_STATUS = {
+  EXPIRED: 'expired',
+  HAS_DATE: 'has_date',
+  NONE: 'none',
+} as const;
+
+/**
+ * Estado de visualización de vencimiento derivado de `EXPIRATION_DISPLAY_STATUS`.
+ */
+export type ExpirationDisplayStatus =
+  (typeof EXPIRATION_DISPLAY_STATUS)[keyof typeof EXPIRATION_DISPLAY_STATUS];
+
+/**
+ * Producto próximo a vencer tal como lo devuelve el endpoint de alertas.
+ */
+export interface ExpiringProduct {
+  id: string;
+  name: string;
+  /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). */
+  expiration_date: string;
+  /** Días restantes hasta el vencimiento (negativo si ya venció). */
+  days_remaining: number;
+  quantity: number;
+}
+
+function parseExpirationDate(isoDate: string | undefined): Date | null {
+  if (!isoDate) return null;
+
+  const [year, month, day] = isoDate.split('-').map(Number);
+  if (!year || !month || !day) return null;
+
+  const parsedDate = new Date(year, month - 1, day);
+  parsedDate.setHours(0, 0, 0, 0);
+  return parsedDate;
+}
+
+/**
+ * Determina el estado simple de vencimiento a partir de una fecha opcional.
+ *
+ * @param expirationDate - Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD)
+ * @returns Estado de visualización para UI simple
+ */
+export function getExpirationDisplayStatus(
+  expirationDate: string | undefined
+): ExpirationDisplayStatus {
+  const parsedDate = parseExpirationDate(expirationDate);
+  if (!parsedDate) return EXPIRATION_DISPLAY_STATUS.NONE;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return parsedDate.getTime() < today.getTime()
+    ? EXPIRATION_DISPLAY_STATUS.EXPIRED
+    : EXPIRATION_DISPLAY_STATUS.HAS_DATE;
+}
+
+/**
+ * Devuelve una etiqueta legible para el estado simple de vencimiento.
+ */
+export function getExpirationDisplayLabel(status: ExpirationDisplayStatus): string {
+  switch (status) {
+    case EXPIRATION_DISPLAY_STATUS.EXPIRED:
+      return 'Vencido';
+    case EXPIRATION_DISPLAY_STATUS.HAS_DATE:
+      return 'Con fecha';
+    case EXPIRATION_DISPLAY_STATUS.NONE:
+      return 'Sin vencimiento';
+  }
+}
+
+/**
+ * Devuelve clases Tailwind para el estado simple de vencimiento.
+ */
+export function getExpirationDisplayStatusColor(
+  status: ExpirationDisplayStatus
+): string {
+  switch (status) {
+    case EXPIRATION_DISPLAY_STATUS.EXPIRED:
+      return 'text-red-700 bg-red-100 border-red-300';
+    case EXPIRATION_DISPLAY_STATUS.HAS_DATE:
+      return 'text-slate-700 bg-slate-100 border-slate-300';
+    case EXPIRATION_DISPLAY_STATUS.NONE:
+      return 'text-muted-foreground bg-muted border-border';
   }
 }
