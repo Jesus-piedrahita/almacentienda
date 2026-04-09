@@ -1,6 +1,8 @@
 /**
- * @fileoverview Zustand store para el POS de ventas (frontend-only mock).
+ * @fileoverview Zustand store para el POS de ventas — estado local del carrito.
  * Gestiona el carrito, método de pago y fase de checkout sin persistencia.
+ * La persistencia de ventas al backend es responsabilidad del hook `useCreateSale`
+ * en `@/hooks/use-sales`. Este store solo gestiona estado de UI efímero.
  * Los valores derivados (subtotal, IVA, total, cambio) se exponen como
  * selectores para evitar almacenar datos redundantes.
  */
@@ -134,8 +136,9 @@ export const useSalesStore = create<SalesStore>((set) => ({
     }),
 
   /**
-   * Confirma la venta mock y resetea todo el estado.
-   * No realiza ninguna llamada a la API.
+   * Confirma la venta y resetea todo el estado del carrito (sincrónico).
+   * Debe ser llamado SOLO después de que la API haya confirmado la venta exitosamente.
+   * La llamada a la API es responsabilidad del componente (PaymentDialog via useCreateSale).
    */
   completeSale: () =>
     set({

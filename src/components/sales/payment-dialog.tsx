@@ -1,5 +1,5 @@
 /**
- * @fileoverview Diálogo de pago del POS (mock frontend-only).
+ * @fileoverview Diálogo de pago del POS — integración con API de ventas.
  *
  * Flujo del diálogo de pago:
  *
@@ -7,15 +7,15 @@
  * flowchart TD
  *     A[Cobrar] --> B[Abre diálogo]
  *     B --> C{Método de pago}
- *     C -->|Efectivo| D[Ingresar monto recibido]
- *     D --> E{¿Cubre el total?}
- *     E -->|Sí| F[Mostrar cambio]
- *     E -->|No| G[Confirmar deshabilitado]
- *     F --> H[Confirmar habilitado]
- *     C -->|Tarjeta| H
- *     H --> I[Simular procesamiento 300ms]
- *     I --> J[Estado de éxito]
- *     J --> K[Cierra y limpia carrito]
+ *     C -->|Tarjeta| D[Bloquear: Pago con tarjeta no disponible]
+ *     C -->|Efectivo| E[Ingresar monto recibido]
+ *     E --> F{¿Cubre el total?}
+ *     F -->|Sí| G[Mostrar cambio]
+ *     F -->|No| H[Confirmar deshabilitado]
+ *     G --> I[Confirmar habilitado]
+ *     I --> J[POST /api/sales via useCreateSale]
+ *     J -->|Éxito| K[Estado de éxito → completeSale → cierra]
+ *     J -->|Error| L[Mostrar error inline → preservar carrito]
  * ```
  *
  * @example
@@ -25,7 +25,7 @@
  */
 
 import { useState } from 'react';
-import { CreditCard, Banknote, CheckCircle2, Loader2 } from 'lucide-react';
+import { CreditCard, Banknote, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
@@ -49,6 +49,7 @@ import {
   selectChange,
 } from '@/stores/sales-store';
 import type { PaymentMethod } from '@/types/sales';
+import { useCreateSale } from '@/hooks/use-sales';
 
 // ---------------------------------------------------------------------------
 // Tipos internos
@@ -87,9 +88,10 @@ function formatCurrency(value: number): string {
  * - Muestra resumen de totales (subtotal, IVA, total)
  * - Permite seleccionar método de pago: efectivo o tarjeta
  * - Modo efectivo: campo de monto recibido con validación y cambio calculado
- * - Modo tarjeta: confirmación directa sin monto
- * - Simula procesamiento (300ms) y muestra estado de éxito antes de cerrar
- * - Al confirmar: llama a `completeSale()` que limpia el carrito
+ * - Modo tarjeta: muestra advertencia "Pago con tarjeta no disponible aún" e impide la venta
+ * - Llama a `useCreateSale` para persistir la venta en el backend
+ * - En error: muestra mensaje inline y preserva el carrito
+ * - En éxito: muestra estado de éxito y llama a `completeSale()` para limpiar carrito
  */
 export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   // ─── Store ─────────────────────────────────────────────────────────────────
@@ -118,13 +120,19 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const total = selectTotal(storeState);
   const change = selectChange(storeState);
 
+  // ─── API Mutation ───────────────────────────────────────────────────────────
+  const createSale = useCreateSale();
+
   // ─── Estado local del diálogo ───────────────────────────────────────────
   const [processing, setProcessing] = useState<ProcessingState>('idle');
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // ─── Derivados de validación ────────────────────────────────────────────
   const isCash = paymentMethod === 'cash';
+  const isCard = paymentMethod === 'card';
   const canConfirm =
     processing === 'idle' &&
+    !isCard &&
     (paymentMethod === 'card' || amountReceived >= total);
   const showChange = isCash && amountReceived > 0 && amountReceived >= total;
   const showInsufficient = isCash && amountReceived > 0 && amountReceived < total;
@@ -133,6 +141,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
   function handleMethodChange(method: PaymentMethod) {
     setPaymentMethod(method);
+    setApiError(null);
     // Resetear monto al cambiar método
     if (method === 'card') {
       setAmountReceived(0);
@@ -142,33 +151,59 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   function handleAmountChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = parseFloat(e.target.value);
     setAmountReceived(isNaN(value) ? 0 : value);
+    if (apiError) setApiError(null);
   }
 
   async function handleConfirm() {
     if (!canConfirm) return;
 
-    // Simular procesamiento (300ms para UX — mock frontend-only)
+    // Guard: tarjeta no soportada (esta rama nunca debería alcanzarse por
+    // canConfirm, pero se mantiene como capa de seguridad defensiva)
+    if (paymentMethod === 'card') {
+      return;
+    }
+
     setProcessing('processing');
-    await new Promise<void>((resolve) => setTimeout(resolve, 300));
+    setApiError(null);
 
-    // Mostrar estado de éxito brevemente antes de cerrar
-    setProcessing('success');
-    await new Promise<void>((resolve) => setTimeout(resolve, 800));
+    try {
+      await createSale.mutateAsync({
+        paymentMethod: 'cash',
+        items: storeState.items.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+        })),
+      });
 
-    // Completar la venta (limpia el carrito en el store)
-    completeSale();
-    setProcessing('idle');
-    onOpenChange(false);
+      // Mostrar estado de éxito brevemente antes de cerrar
+      setProcessing('success');
+      await new Promise<void>((resolve) => setTimeout(resolve, 800));
+
+      // Completar la venta (limpia el carrito en el store)
+      completeSale();
+      setProcessing('idle');
+      onOpenChange(false);
+    } catch (err: unknown) {
+      setProcessing('idle');
+      // Extraer mensaje del error de Axios si está disponible
+      const axiosErr = err as { response?: { data?: { detail?: string } } };
+      const message =
+        axiosErr?.response?.data?.detail ??
+        'Error al procesar la venta. Intentá de nuevo.';
+      setApiError(message);
+    }
   }
 
   function handleCancel() {
     if (processing !== 'idle') return;
+    setApiError(null);
     resetCheckout();
     onOpenChange(false);
   }
 
   function handleOpenChange(isOpen: boolean) {
     if (!isOpen && processing === 'idle') {
+      setApiError(null);
       resetCheckout();
     }
     if (processing !== 'idle') return; // no cerrar durante procesamiento
@@ -297,11 +332,25 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             </div>
           )}
 
-          {/* Modo tarjeta: info */}
-          {!isCash && (
-            <div className="rounded-lg bg-muted/50 border px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
-              <CreditCard className="size-4 shrink-0" />
-              El pago con tarjeta se procesará por {formatCurrency(total)}.
+          {/* Modo tarjeta: advertencia de no disponible */}
+          {isCard && (
+            <div
+              role="alert"
+              className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2"
+            >
+              <AlertCircle className="size-4 shrink-0" />
+              Pago con tarjeta no disponible aún. Seleccioná efectivo para continuar.
+            </div>
+          )}
+
+          {/* Error de API inline */}
+          {apiError && (
+            <div
+              role="alert"
+              className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2"
+            >
+              <AlertCircle className="size-4 shrink-0" />
+              {apiError}
             </div>
           )}
         </div>

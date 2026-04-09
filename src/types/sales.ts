@@ -1,7 +1,11 @@
 /**
  * @fileoverview Tipos TypeScript para el módulo de ventas (POS).
- * Define las interfaces para el carrito, métodos de pago y estado del checkout.
- * Frontend-only mock — no hay persistencia en backend.
+ *
+ * Tipos de dominio exportados para contratos con el backend:
+ * - `SaleItem`, `Sale`, `SalesPagination`, `CreateSaleInput`
+ *
+ * Tipos de estado local del POS (efímeros, Zustand):
+ * - `CartItem`, `SalesState`, `SalesActions`, `PaymentMethod`, `CheckoutPhase`
  */
 
 import type { Product } from './inventory';
@@ -15,7 +19,7 @@ export interface CartItem {
 }
 
 /**
- * Métodos de pago soportados en el mock
+ * Métodos de pago soportados
  */
 export const PAYMENT_METHOD = {
   CASH: 'cash',
@@ -67,8 +71,59 @@ export interface SalesActions {
   setAmountReceived: (amount: number) => void;
   /** Abre la fase de pago (solo si hay items) */
   openCheckout: () => void;
-  /** Confirma la venta mock y resetea el estado */
+  /** Confirma la venta y resetea el estado */
   completeSale: () => void;
   /** Resetea la fase de checkout sin limpiar el carrito */
   resetCheckout: () => void;
+}
+
+// ============================================================
+// Tipos de dominio — contratos con el backend (persistencia)
+// ============================================================
+
+/**
+ * Item de una venta persistida en el backend.
+ * Los IDs son strings (mapeados desde number en la API).
+ */
+export interface SaleItem {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+/**
+ * Venta persistida en el backend.
+ */
+export interface Sale {
+  id: string;
+  userId: string;
+  state: 'completed' | 'cancelled';
+  paymentMethod: 'cash';
+  subtotal: number;
+  total: number;
+  createdAt: string;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  items: SaleItem[];
+}
+
+/**
+ * Paginación de la lista de ventas.
+ */
+export interface SalesPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+/**
+ * Input para crear una nueva venta en el backend.
+ */
+export interface CreateSaleInput {
+  paymentMethod: PaymentMethod;
+  items: Array<{ productId: string; quantity: number }>;
 }

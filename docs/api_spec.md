@@ -558,7 +558,124 @@ Registra movimiento manualmente. **Admin only.**
 
 ---
 
-## Ventas (Header + Details)
+## Contratos de Ventas
+
+```mermaid
+flowchart TD
+    A[Contrato vigente consumido por frontend] --> B[/api/sales]
+    C[Contrato roadmap/legacy] --> D[/ventas y /ventas/fiadas]
+```
+
+### A) Ventas POS (Contrato vigente en la interfaz frontend)
+
+> Esta sección documenta el contrato **real actualmente consumido por el frontend** (`useCreateSale`, `useSales`, `useSale`).
+> Base efectiva usada en cliente: `http://localhost:8000` + prefijo `/api`.
+
+```mermaid
+flowchart LR
+    UI[PaymentDialog / SalesPage] --> H1[useCreateSale]
+    UI --> H2[useSales]
+    UI --> H3[useSale]
+    H1 -->|POST /api/sales| API
+    H2 -->|GET /api/sales?page&limit| API
+    H3 -->|GET /api/sales/{id}| API
+    API -->|snake_case| H1
+    H1 -->|mapper camelCase| UI
+```
+
+### POST /api/sales
+
+Registra venta real (backend calcula totales y descuenta stock).
+
+**Request (frontend → backend):**
+```json
+{
+  "payment_method": "cash",
+  "items": [
+    {
+      "product_id": 1,
+      "quantity": 2
+    }
+  ]
+}
+```
+
+**Response (backend):**
+```json
+{
+  "id": 10,
+  "user_id": 2,
+  "state": "completed",
+  "payment_method": "cash",
+  "subtotal": 37.0,
+  "total": 42.92,
+  "created_at": "2026-04-09T12:00:00Z",
+  "cancelled_at": null,
+  "cancel_reason": null,
+  "items": [
+    {
+      "id": 101,
+      "product_id": 1,
+      "product_name": "Coca Cola 600ml",
+      "quantity": 2,
+      "unit_price": 18.5,
+      "subtotal": 37.0
+    }
+  ]
+}
+```
+
+### GET /api/sales?page=1&limit=20
+
+Lista paginada de ventas.
+
+**Response (backend):**
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "user_id": 2,
+      "state": "completed",
+      "payment_method": "cash",
+      "subtotal": 37.0,
+      "total": 42.92,
+      "created_at": "2026-04-09T12:00:00Z",
+      "cancelled_at": null,
+      "cancel_reason": null,
+      "items": []
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "total_pages": 1
+  }
+}
+```
+
+> Nota de mapeo frontend: `total_pages` se transforma a `totalPages` en `src/hooks/use-sales.ts`.
+
+### GET /api/sales/{id}
+
+Obtiene detalle completo de una venta.
+
+### Reglas funcionales actualmente aplicadas en UI
+
+- Pago con tarjeta está bloqueado visualmente (backend actual soporta `cash`).
+- Si `POST /api/sales` falla, el carrito **se preserva** y se muestra error inline.
+- Tras venta exitosa, frontend invalida caches de:
+  - `['sales']`
+  - `['products']`
+  - `['inventory-stats']`
+
+---
+
+### B) Ventas (Roadmap/Legacy — no consumido por la interfaz actual)
+
+> ⚠️ Esta sección describe contratos históricos/planificados (`/ventas`, `/ventas/fiadas`) y **no** representa el consumo actual del frontend POS.
+> Para la integración vigente de interfaz usar únicamente la sección **A) Ventas POS** (`/api/sales`).
 
 ### GET /ventas
 

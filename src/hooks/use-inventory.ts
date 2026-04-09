@@ -139,7 +139,7 @@ export function useProducts(page: number = 1) {
       const response = await api.get<ApiProductsResponse>('/api/inventory/products', {
         params: { page, limit: 20 },
       });
-      
+
       return {
         data: response.data.data.map(mapApiProductToProduct),
         pagination: response.data.pagination,

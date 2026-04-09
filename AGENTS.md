@@ -23,6 +23,8 @@
 8. **HTTP**: Usar Axios para peticiones HTTP.
 9. **Routing**: Usar React Router.
 10. **Commits**: Seguir conventional-commits: `<tipo>[alcance]: <descripción>`.
+11. **Implementación por capas (MANDATORIO)**: Toda creación o modificación funcional debe ejecutarse por capas puntuales para evitar bloqueos del proceso. Orden obligatorio sugerido: `types` → `api (axios)` → `hooks (tanstack query)` → `store (zustand)` → `UI/components` → `tests` → `docs/roadmap`.
+12. **Roadmap obligatorio por cambio**: Cada cambio no trivial debe crear/actualizar su roadmap en `docs/roadmap.md` o en el artefacto SDD (`openspec/.../tasks.md`) con fases pequeñas y verificables. No se permite implementar “todo junto” en un único bloque.
 
 ---
 

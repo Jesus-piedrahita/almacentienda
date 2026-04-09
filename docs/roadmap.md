@@ -431,3 +431,28 @@ Fase 11 ← Fase 10 ← Fase 9 ← Fase 8 ← Fase 7
 | Tiempo respuesta API | < 200ms |
 | UI responsive | 100% |
 | Stock bajo precisión | > 90% |
+
+---
+
+## Roadmap obligatorio por capas — Integración Frontend Ventas API
+
+> Regla operativa: toda implementación no trivial se ejecuta por capas puntuales para evitar bloqueos.
+
+```mermaid
+flowchart LR
+    A[Layer 1: types] --> B[Layer 2: api axios/use-sales]
+    B --> C[Layer 3: hooks tanstack query]
+    C --> D[Layer 4: store zustand]
+    D --> E[Layer 5: UI PaymentDialog/SalesPage]
+    E --> F[Layer 6: tests]
+    F --> G[Layer 7: verify + docs]
+```
+
+### Fases del cambio `frontend-sales-api-layered`
+- [x] **L1 Tipos**: contratos `Sale`, `SaleItem`, `SalesPagination`, `CreateSaleInput`.
+- [x] **L2 API/Hooks**: `useCreateSale`, `useSales`, `useSale` y `salesQueryKeys`.
+- [x] **L3 Integración UI**: `PaymentDialog` usa `mutateAsync` real con errores inline.
+- [x] **L4 Reglas de negocio UI**: tarjeta bloqueada por backend (`cash` only), efectivo validado.
+- [x] **L5 Sincronización**: invalidación de `sales`, `products`, `inventory-stats` tras venta.
+- [x] **L6 Tests**: hooks + dialog + page + store en verde (scope del cambio).
+- [x] **L7 Verify SDD**: cierre con corrección de paginación (`total_pages -> totalPages`).

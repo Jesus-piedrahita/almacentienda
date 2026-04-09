@@ -1,23 +1,23 @@
 /**
- * @fileoverview Test de integración para SalesPage (POS frontend-only mock).
+ * @fileoverview Test de integración para SalesPage (POS con API de ventas).
  *
  * Verifica el flujo completo del POS:
  * 1. Búsqueda de productos → agregar al carrito
  * 2. Ajuste de cantidades desde el carrito
  * 3. Apertura del diálogo de pago
- * 4. Completar venta (modo tarjeta — no requiere monto)
+ * 4. Completar venta con efectivo — delega a la API de ventas
  * 5. Reset del carrito al finalizar
  *
- * Scope mock frontend-only: verifica explícitamente que NO se emite
- * ningún POST a un endpoint de ventas (api.post nunca es llamado).
+ * Cambios respecto al flujo mock:
+ * - El pago con tarjeta muestra advertencia y bloquea el Confirmar
+ * - El flujo de efectivo exitoso llama a api.post (/api/sales)
+ * - Se verifica que la finalización delega a la capa de API
  *
  * Estrategia de mocking:
  * - `@/hooks/use-inventory` → useSearchProducts mockeado para devolver productos fijos
  * - `@/stores/auth-store` → usuario simulado para pasar ProtectedRoute
- * - `@/lib/api` → axios mockeado para capturar cualquier llamada HTTP
+ * - `@/lib/api` → axios mockeado para capturar y controlar llamadas HTTP
  * - `react-router` → MemoryRouter con initialEntries=['/sales']
- * - Los timers reales se usan para simplificar (vi.useFakeTimers no necesario
- *   porque no testamos debounce — solo verificamos flujo de UI)
  */
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
@@ -345,14 +345,11 @@ describe('SalesPage integration', () => {
     expect(totalLabels.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('can confirm sale with card payment (no amount required)', async () => {
-    vi.useFakeTimers();
-
+  it('card payment shows "no disponible" warning and disables Confirm button', async () => {
     useSalesStore.getState().addItem(mockProducts[0]);
 
     renderSalesPage();
 
-    // Abrir diálogo
     const cobrarBtn = screen.getByRole('button', { name: /cobrar/i });
     await act(async () => {
       fireEvent.click(cobrarBtn);
@@ -364,37 +361,14 @@ describe('SalesPage integration', () => {
       fireEvent.click(cardBtn);
     });
 
-    // El botón "Confirmar" debe estar habilitado con tarjeta
+    // Debe mostrar advertencia de tarjeta no disponible
+    expect(
+      screen.getByText(/pago con tarjeta no disponible aún/i)
+    ).toBeInTheDocument();
+
+    // El botón "Confirmar" debe estar deshabilitado
     const confirmBtn = screen.getByRole('button', { name: /confirmar/i });
-    expect(confirmBtn).not.toBeDisabled();
-
-    // Confirmar la venta
-    await act(async () => {
-      fireEvent.click(confirmBtn);
-    });
-
-    // Avanzar el timer de procesamiento (300ms) + éxito (800ms)
-    await act(async () => {
-      vi.advanceTimersByTime(300);
-    });
-
-    // Mostrar estado de éxito
-    await act(async () => {
-      vi.advanceTimersByTime(800);
-    });
-
-    // Avanzar microtasks para completar las promesas
-    await act(async () => {
-      await vi.runAllTimersAsync();
-    });
-
-    vi.useRealTimers();
-
-    // El carrito debe estar vacío después de completar la venta
-    await waitFor(() => {
-      const { items } = useSalesStore.getState();
-      expect(items).toHaveLength(0);
-    });
+    expect(confirmBtn).toBeDisabled();
   });
 
   it('cash payment blocks confirmation when amount is insufficient', async () => {
@@ -439,18 +413,38 @@ describe('SalesPage integration', () => {
     expect(confirmBtn).not.toBeDisabled();
   });
 
-  // ── Verificación frontend-only: sin llamadas al backend ───────────────────
+  // ── Verificación de delegación a API de ventas ────────────────────────────
 
   /**
-   * TASK 5.6 — Verificación automática de scope frontend-only:
-   * Confirma que completar una venta mock NO emite ningún POST a ningún
-   * endpoint de ventas en el backend.
-   *
-   * Este test ejerce el flujo completo (add → open dialog → card → confirm)
-   * y al final verifica que api.post nunca fue invocado.
+   * Verifica que el flujo completo de venta en efectivo delega la
+   * finalización a la capa de API (api.post → /api/sales) en lugar de
+   * completarse como mock local. Reemplaza el test [5.6] del scope mock.
    */
-  it('[5.6] no backend sales POST is emitted during a complete mock sale flow', async () => {
+  it('cash sale delegates finalization to the sales API layer (POST /api/sales)', async () => {
     vi.useFakeTimers();
+
+    const mockApiSaleResponse = {
+      id: 1,
+      user_id: 5,
+      state: 'completed',
+      payment_method: 'cash',
+      subtotal: 18.5,
+      total: 21.46,
+      created_at: '2026-04-09T12:00:00Z',
+      cancelled_at: null,
+      cancel_reason: null,
+      items: [
+        {
+          id: 10,
+          product_id: 1,
+          product_name: 'Coca Cola 600ml',
+          quantity: 1,
+          unit_price: 18.5,
+          subtotal: 18.5,
+        },
+      ],
+    };
+    mockedApiPost.mockResolvedValueOnce({ data: mockApiSaleResponse });
 
     useSalesStore.getState().addItem(mockProducts[0]);
 
@@ -462,10 +456,10 @@ describe('SalesPage integration', () => {
       fireEvent.click(cobrarBtn);
     });
 
-    // Seleccionar tarjeta y confirmar
-    const cardBtn = screen.getByRole('button', { name: /tarjeta/i });
+    // Ingresar monto suficiente (modo efectivo por defecto)
+    const amountInput = screen.getByLabelText(/monto recibido/i);
     await act(async () => {
-      fireEvent.click(cardBtn);
+      fireEvent.change(amountInput, { target: { value: '50' } });
     });
 
     const confirmBtn = screen.getByRole('button', { name: /confirmar/i });
@@ -473,20 +467,28 @@ describe('SalesPage integration', () => {
       fireEvent.click(confirmBtn);
     });
 
-    // Avanzar timers de procesamiento
-    await act(async () => {
-      vi.advanceTimersByTime(300);
-    });
-    await act(async () => {
-      vi.advanceTimersByTime(800);
-    });
+    // Avanzar timers del éxito (800ms)
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
     vi.useRealTimers();
 
-    // VERIFICACIÓN CRÍTICA: api.post nunca fue llamado
-    expect(mockedApiPost).not.toHaveBeenCalled();
+    // VERIFICACIÓN CRÍTICA: api.post FOI chamado con /api/sales
+    expect(mockedApiPost).toHaveBeenCalledWith(
+      '/api/sales',
+      expect.objectContaining({
+        payment_method: 'cash',
+        items: expect.arrayContaining([
+          expect.objectContaining({ product_id: expect.any(Number), quantity: 1 }),
+        ]),
+      })
+    );
+
+    // El carrito debe estar vacío después de completar la venta
+    await waitFor(() => {
+      const { items } = useSalesStore.getState();
+      expect(items).toHaveLength(0);
+    });
   });
 });

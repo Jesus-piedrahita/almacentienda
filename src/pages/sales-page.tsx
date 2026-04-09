@@ -1,5 +1,5 @@
 /**
- * @fileoverview Página del Punto de Venta (POS) — mock frontend-only.
+ * @fileoverview Página del Punto de Venta (POS) — integración con API de ventas.
  *
  * Layout de dos columnas:
  * - Columna izquierda (2/3): `ProductSearchPanel` — búsqueda de productos
@@ -9,7 +9,8 @@
  * `checkoutPhase` del `useSalesStore`. El botón "Cobrar" en `CartPanel`
  * llama a `openCheckout()`, que setea `checkoutPhase = 'payment'`.
  *
- * No realiza ninguna llamada a un endpoint de ventas en el backend.
+ * La persistencia de ventas al backend se delega a `useCreateSale` en
+ * `@/hooks/use-sales`, invocado desde `PaymentDialog.handleConfirm`.
  *
  * @example
  * ```tsx
@@ -31,7 +32,7 @@ import { useSalesStore } from '@/stores/sales-store';
  * `PaymentDialog` (cobro) en el layout split-panel 2/3 + 1/3.
  *
  * El diálogo se abre cuando `checkoutPhase === 'payment'` y se cierra
- * al completar la venta o cancelar, reseteando el estado del store.
+ * al completar la venta (API confirma) o cancelar, reseteando el estado del store.
  */
 export function SalesPage() {
   const checkoutPhase = useSalesStore((s) => s.checkoutPhase);
