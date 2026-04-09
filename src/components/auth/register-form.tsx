@@ -78,6 +78,7 @@ export function RegisterForm({ className }: { className?: string }) {
               id="email"
               type="email"
               placeholder="tu@ejemplo.com"
+              autoFocus
               {...register("email")}
               aria-invalid={!!errors.email}
             />

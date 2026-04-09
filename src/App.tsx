@@ -8,12 +8,15 @@ import { InventoryPage } from "./pages/inventory-page"
 import { ClientsPage } from "./pages/clients-page"
 import { SalesPage } from "./pages/sales-page"
 import { MainLayout } from "./components/layout/main-layout"
+import { AuthLayout } from "./components/auth/auth-layout"
 import { ProtectedRoute } from "./components/auth/protected-route"
 import { ConfirmDialogHost } from "./components/ui/confirm-dialog-host"
 import { useAuthStore } from "./stores/auth-store"
 
 /**
- * Componente para redirigir a / si ya está autenticado
+ * Componente para redirigir a / si ya está autenticado.
+ * Se aplica a nivel de la layout route de autenticación, una sola vez
+ * para ambas rutas /login y /register.
  */
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -37,23 +40,19 @@ function App() {
     <>
       <BrowserRouter>
         <Routes>
-          {/* Rutas públicas con redirect si ya está autenticado */}
+          {/* Auth layout route — AuthLayout se mantiene montado al navegar entre
+              /login y /register, evitando el remount del panel de branding.
+              AuthRedirect aplica una sola vez para ambas rutas hijas. */}
           <Route
-            path="/login"
             element={
               <AuthRedirect>
-                <LoginPage />
+                <AuthLayout />
               </AuthRedirect>
             }
-          />
-          <Route
-            path="/register"
-            element={
-              <AuthRedirect>
-                <RegisterPage />
-              </AuthRedirect>
-            }
-          />
+          >
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
 
           {/* Rutas protegidas con MainLayout */}
           <Route
@@ -69,8 +68,8 @@ function App() {
             <Route path="/sales" element={<SalesPage />} />
           </Route>
 
-          {/* Redirect raíz a login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Catch-all — redirige rutas no reconocidas al login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
 

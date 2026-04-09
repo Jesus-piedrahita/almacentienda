@@ -456,3 +456,11 @@ flowchart LR
 - [x] **L5 Sincronización**: invalidación de `sales`, `products`, `inventory-stats` tras venta.
 - [x] **L6 Tests**: hooks + dialog + page + store en verde (scope del cambio).
 - [x] **L7 Verify SDD**: cierre con corrección de paginación (`total_pages -> totalPages`).
+
+### Fases del cambio `auth-login-register-smooth-transition`
+- [x] **L1 Routing/Layout**: layout auth compartido con `Outlet` para evitar remount completo.
+- [x] **L2 Estabilidad visual**: contenedor auth con `min-h` para reducir CLS entre login/register.
+- [x] **L3 UX transición**: animación leve `auth-fade-in` + soporte `prefers-reduced-motion`.
+- [x] **L4 Accesibilidad foco**: `autoFocus` en email al entrar a cada vista auth.
+- [x] **L5 Tests**: `auth-layout`, rutas auth y foco/accesibilidad en verde.
+- [x] **L6 QA manual**: validación navegación `/login`↔`/register`, foco con teclado y ausencia de saltos fuertes.

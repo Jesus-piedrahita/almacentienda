@@ -1,48 +1,36 @@
 /**
  * @fileoverview Layout para páginas de autenticación.
  * Proporciona una estructura dividida en dos columnas: panel de branding (escritorio)
- * y panel de formulario (responsive).
+ * y panel de formulario (responsive). Actúa como layout route compartido — renderiza
+ * el contenido hijo a través de <Outlet /> para evitar el remount del panel de branding
+ * al navegar entre /login y /register.
  */
 
-import { cn } from "@/lib/utils"
-import type { ReactNode } from "react"
+import { Outlet } from "react-router"
 
 /**
- * Props del componente AuthLayout.
- */
-interface AuthLayoutProps {
-  /** Contenido a renderizar en el panel de formulario */
-  children: ReactNode
-  /** Clases CSS adicionales para el contenedor de formulario */
-  className?: string
-}
-
-/**
- * Componente AuthLayout - Layout para páginas de autenticación.
+ * Componente AuthLayout - Layout route compartido para páginas de autenticación.
  *
  * Proporciona una estructura de dos paneles:
- * - Izquierda: Panel de branding (solo desktop) con gradiente, logo y descripción
- * - Derecha: Panel de formulario (responsive) donde se renderiza el contenido
+ * - Izquierda: Panel de branding (solo desktop) con gradiente, logo y descripción.
+ *   Se mantiene montado al navegar entre rutas auth (sin remount).
+ * - Derecha: Panel de formulario (responsive) con Outlet donde React Router
+ *   renderiza LoginPage o RegisterPage según la ruta activa.
  *
- * El diseño es completamente responsive: en móvil solo muestra el panel de formulario,
- * en desktop muestra ambos paneles.
- *
- * @param props - Props del layout
- * @param props.children - Contenido a renderizar (típicamente una LoginForm o RegisterForm)
- * @param props.className - Clases adicionales para el contenedor de formulario
+ * El área del Outlet tiene `min-h-[480px]` para prevenir CLS al cambiar entre
+ * el formulario de login (más corto) y el de registro (más alto).
+ * La animación `animate-auth-fade-in` aplica un fade-in suave al montar cada formulario.
  *
  * @example
  * ```tsx
- * <AuthLayout>
- *   <LoginForm />
- * </AuthLayout>
- *
- * <AuthLayout className="custom-class">
- *   <RegisterForm />
- * </AuthLayout>
+ * // App.tsx — ruta layout padre que envuelve las rutas auth
+ * <Route element={<AuthRedirect><AuthLayout /></AuthRedirect>}>
+ *   <Route path="/login" element={<LoginPage />} />
+ *   <Route path="/register" element={<RegisterPage />} />
+ * </Route>
  * ```
  */
-export function AuthLayout({ children, className }: AuthLayoutProps) {
+export function AuthLayout() {
   return (
     <div className="grid md:grid-cols-2 min-h-screen">
       {/* Left: Branding panel - hidden on mobile, visible on desktop */}
@@ -82,9 +70,13 @@ export function AuthLayout({ children, className }: AuthLayoutProps) {
         </div>
       </aside>
 
-      {/* Right: Form panel */}
+      {/* Right: Form panel — stable min-h prevents CLS between login/register */}
       <main className="flex items-center justify-center p-6 bg-background">
-        <div className={cn("w-full max-w-md", className)}>{children}</div>
+        <div className="w-full max-w-md min-h-[480px] flex items-start justify-center">
+          <div className="w-full animate-auth-fade-in">
+            <Outlet />
+          </div>
+        </div>
       </main>
     </div>
   )
