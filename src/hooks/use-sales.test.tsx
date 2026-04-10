@@ -78,6 +78,8 @@ const mockApiSaleItem = {
 const mockApiSale = {
   id: 1,
   user_id: 5,
+  client_id: null,
+  client_name: null,
   state: 'completed' as const,
   payment_method: 'cash' as const,
   subtotal: 37.0,
@@ -141,6 +143,18 @@ describe('mapApiSaleToSale', () => {
     expect(sale.state).toBe('completed');
   });
 
+  it('mapea client_id/client_name correctamente', () => {
+    const sale = mapApiSaleToSale({
+      ...mockApiSale,
+      payment_method: 'credit' as const,
+      client_id: 8,
+      client_name: 'Juan Pérez',
+    });
+    expect(sale.clientId).toBe('8');
+    expect(sale.clientName).toBe('Juan Pérez');
+    expect(sale.paymentMethod).toBe('credit');
+  });
+
   it('mapea campos de cancelación cuando están presentes', () => {
     const cancelledSale = {
       ...mockApiSale,
@@ -200,6 +214,28 @@ describe('useCreateSale', () => {
     });
   });
 
+  it('envía client_id cuando la venta es credit', async () => {
+    mockedApiPost.mockResolvedValueOnce({
+      data: { ...mockApiSale, payment_method: 'credit', client_id: 5, client_name: 'Ana' },
+    });
+
+    const { result } = renderHook(() => useCreateSale(), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      paymentMethod: 'credit',
+      clientId: '5',
+      items: [{ productId: '99', quantity: 2 }],
+    });
+
+    expect(mockedApiPost).toHaveBeenCalledWith('/api/sales', {
+      payment_method: 'credit',
+      client_id: 5,
+      items: [{ product_id: 99, quantity: 2 }],
+    });
+  });
+
   it('retorna Sale mapeado en camelCase después de mutación exitosa', async () => {
     mockedApiPost.mockResolvedValueOnce({ data: mockApiSale });
 
@@ -235,7 +271,7 @@ describe('useCreateSale', () => {
     );
   });
 
-  it('invalida ["products"] e ["inventory-stats"] en onSuccess', async () => {
+  it('invalida ["products"], ["inventory-stats"] y ["clients"] en onSuccess', async () => {
     mockedApiPost.mockResolvedValueOnce({ data: mockApiSale });
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
@@ -253,6 +289,9 @@ describe('useCreateSale', () => {
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ['inventory-stats'] })
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['clients'] })
     );
   });
 });

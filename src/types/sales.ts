@@ -23,7 +23,7 @@ export interface CartItem {
  */
 export const PAYMENT_METHOD = {
   CASH: 'cash',
-  CARD: 'card',
+  CREDIT: 'credit',
 } as const;
 
 export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD];
@@ -51,6 +51,8 @@ export interface SalesState {
   amountReceived: number;
   /** Fase actual del checkout */
   checkoutPhase: CheckoutPhase;
+  /** Cliente seleccionado para venta fiada */
+  selectedClientId: string | null;
 }
 
 /**
@@ -67,6 +69,8 @@ export interface SalesActions {
   clearCart: () => void;
   /** Establece el método de pago */
   setPaymentMethod: (method: PaymentMethod) => void;
+  /** Establece el cliente seleccionado para venta fiada */
+  setSelectedClientId: (clientId: string | null) => void;
   /** Establece el monto recibido del cliente */
   setAmountReceived: (amount: number) => void;
   /** Abre la fase de pago (solo si hay items) */
@@ -100,8 +104,10 @@ export interface SaleItem {
 export interface Sale {
   id: string;
   userId: string;
+  clientId: string | null;
+  clientName: string | null;
   state: 'completed' | 'cancelled';
-  paymentMethod: 'cash';
+  paymentMethod: 'cash' | 'credit';
   subtotal: number;
   total: number;
   createdAt: string;
@@ -125,5 +131,6 @@ export interface SalesPagination {
  */
 export interface CreateSaleInput {
   paymentMethod: PaymentMethod;
+  clientId?: string | null;
   items: Array<{ productId: string; quantity: number }>;
 }

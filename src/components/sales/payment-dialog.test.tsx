@@ -38,6 +38,21 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+vi.mock('@/hooks/use-clients', () => ({
+  useClients: () => ({
+    data: [
+      {
+        id: '5',
+        name: 'Juan Pérez',
+        email: 'juan@test.com',
+        isActive: 1,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ],
+    isLoading: false,
+  }),
+}));
+
 const mockedApiPost = vi.mocked(api.post);
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -61,6 +76,8 @@ const mockProduct: Product = {
 const mockApiSaleResponse = {
   id: 1,
   user_id: 5,
+  client_id: null,
+  client_name: null,
   state: 'completed' as const,
   payment_method: 'cash' as const,
   subtotal: 18.5,
@@ -206,39 +223,70 @@ describe('PaymentDialog', () => {
     });
   });
 
-  // ── Tarjeta bloqueada ──────────────────────────────────────────────────────
+  // ── Fiado ─────────────────────────────────────────────────────────────────
 
-  it('muestra advertencia al seleccionar tarjeta', async () => {
+  it('muestra selector al seleccionar fiado', async () => {
     renderDialog();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /tarjeta/i }));
+      fireEvent.click(screen.getByRole('button', { name: /fiado/i }));
     });
 
-    expect(
-      screen.getByText(/pago con tarjeta no disponible aún/i)
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/cliente deudor/i)).toBeInTheDocument();
   });
 
-  it('deshabilita el botón Confirmar cuando se selecciona tarjeta', async () => {
+  it('deshabilita el botón Confirmar cuando se selecciona fiado sin cliente', async () => {
     renderDialog();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /tarjeta/i }));
+      fireEvent.click(screen.getByRole('button', { name: /fiado/i }));
     });
 
     expect(screen.getByRole('button', { name: /confirmar/i })).toBeDisabled();
   });
 
-  it('el carrito permanece intacto al seleccionar tarjeta', async () => {
+  it('habilita Confirmar cuando se selecciona cliente en fiado', async () => {
     renderDialog();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /tarjeta/i }));
+      fireEvent.click(screen.getByRole('button', { name: /fiado/i }));
     });
 
-    expect(useSalesStore.getState().items).toHaveLength(1);
-    expect(mockedApiPost).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(/cliente deudor/i), {
+      target: { value: '5' },
+    });
+
+    expect(screen.getByRole('button', { name: /confirmar/i })).not.toBeDisabled();
+  });
+
+  it('envía client_id al confirmar una venta fiada', async () => {
+    mockedApiPost.mockResolvedValueOnce({
+      data: {
+        ...mockApiSaleResponse,
+        payment_method: 'credit',
+        client_id: 5,
+        client_name: 'Juan Pérez',
+      },
+    });
+    renderDialog();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /fiado/i }));
+    });
+
+    fireEvent.change(screen.getByLabelText(/cliente deudor/i), {
+      target: { value: '5' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /confirmar/i }));
+    });
+
+    expect(mockedApiPost).toHaveBeenCalledWith('/api/sales', {
+      payment_method: 'credit',
+      client_id: 5,
+      items: [{ product_id: 1, quantity: 1 }],
+    });
   });
 
   // ── Error de API ───────────────────────────────────────────────────────────

@@ -25,7 +25,7 @@
  */
 
 import { useState } from 'react';
-import { CreditCard, Banknote, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { CreditCard, Banknote, CheckCircle2, Loader2, AlertCircle, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
@@ -50,6 +50,7 @@ import {
 } from '@/stores/sales-store';
 import type { PaymentMethod } from '@/types/sales';
 import { useCreateSale } from '@/hooks/use-sales';
+import { useClients } from '@/hooks/use-clients';
 
 // ---------------------------------------------------------------------------
 // Tipos internos
@@ -86,9 +87,9 @@ function formatCurrency(value: number): string {
  *
  * Funciones:
  * - Muestra resumen de totales (subtotal, IVA, total)
- * - Permite seleccionar método de pago: efectivo o tarjeta
+ * - Permite seleccionar método de pago: efectivo o fiado
  * - Modo efectivo: campo de monto recibido con validación y cambio calculado
- * - Modo tarjeta: muestra advertencia "Pago con tarjeta no disponible aún" e impide la venta
+ * - Modo fiado: exige seleccionar un cliente existente y registra deuda asociada
  * - Llama a `useCreateSale` para persistir la venta en el backend
  * - En error: muestra mensaje inline y preserva el carrito
  * - En éxito: muestra estado de éxito y llama a `completeSale()` para limpiar carrito
@@ -98,7 +99,9 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const {
     paymentMethod,
     amountReceived,
+    selectedClientId,
     setPaymentMethod,
+    setSelectedClientId,
     setAmountReceived,
     completeSale,
     resetCheckout,
@@ -106,7 +109,9 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     useShallow((s) => ({
       paymentMethod: s.paymentMethod,
       amountReceived: s.amountReceived,
+      selectedClientId: s.selectedClientId,
       setPaymentMethod: s.setPaymentMethod,
+      setSelectedClientId: s.setSelectedClientId,
       setAmountReceived: s.setAmountReceived,
       completeSale: s.completeSale,
       resetCheckout: s.resetCheckout,
@@ -122,6 +127,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
   // ─── API Mutation ───────────────────────────────────────────────────────────
   const createSale = useCreateSale();
+  const { data: clients = [], isLoading: isLoadingClients } = useClients();
 
   // ─── Estado local del diálogo ───────────────────────────────────────────
   const [processing, setProcessing] = useState<ProcessingState>('idle');
@@ -129,11 +135,11 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
   // ─── Derivados de validación ────────────────────────────────────────────
   const isCash = paymentMethod === 'cash';
-  const isCard = paymentMethod === 'card';
+  const isCredit = paymentMethod === 'credit';
   const canConfirm =
     processing === 'idle' &&
-    !isCard &&
-    (paymentMethod === 'card' || amountReceived >= total);
+    (isCash ? amountReceived >= total : true) &&
+    (isCredit ? !!selectedClientId : true);
   const showChange = isCash && amountReceived > 0 && amountReceived >= total;
   const showInsufficient = isCash && amountReceived > 0 && amountReceived < total;
 
@@ -143,8 +149,11 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     setPaymentMethod(method);
     setApiError(null);
     // Resetear monto al cambiar método
-    if (method === 'card') {
+    if (method === 'credit') {
       setAmountReceived(0);
+    }
+    if (method !== 'credit') {
+      setSelectedClientId(null);
     }
   }
 
@@ -157,18 +166,13 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   async function handleConfirm() {
     if (!canConfirm) return;
 
-    // Guard: tarjeta no soportada (esta rama nunca debería alcanzarse por
-    // canConfirm, pero se mantiene como capa de seguridad defensiva)
-    if (paymentMethod === 'card') {
-      return;
-    }
-
     setProcessing('processing');
     setApiError(null);
 
     try {
       await createSale.mutateAsync({
-        paymentMethod: 'cash',
+        paymentMethod,
+        clientId: isCredit ? selectedClientId : null,
         items: storeState.items.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -278,13 +282,13 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               </Button>
               <Button
                 type="button"
-                variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                className={cn('gap-2', paymentMethod === 'card' && 'ring-2 ring-primary ring-offset-2')}
-                onClick={() => handleMethodChange('card')}
+                variant={paymentMethod === 'credit' ? 'default' : 'outline'}
+                className={cn('gap-2', paymentMethod === 'credit' && 'ring-2 ring-primary ring-offset-2')}
+                onClick={() => handleMethodChange('credit')}
                 disabled={processing !== 'idle'}
               >
-                <CreditCard className="size-4" />
-                Tarjeta
+                <Users className="size-4" />
+                Fiado
               </Button>
             </div>
           </div>
@@ -332,14 +336,42 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             </div>
           )}
 
-          {/* Modo tarjeta: advertencia de no disponible */}
-          {isCard && (
-            <div
-              role="alert"
-              className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2"
-            >
-              <AlertCircle className="size-4 shrink-0" />
-              Pago con tarjeta no disponible aún. Seleccioná efectivo para continuar.
+          {/* Modo fiado: selector de cliente */}
+          {isCredit && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="client-select">Cliente deudor</Label>
+                <select
+                  id="client-select"
+                  value={selectedClientId ?? ''}
+                  onChange={(e) => setSelectedClientId(e.target.value || null)}
+                  disabled={processing !== 'idle' || isLoadingClients}
+                  className="flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">
+                    {isLoadingClients ? 'Cargando clientes...' : 'Seleccioná un cliente'}
+                  </option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name} — {client.email}
+                    </option>
+                  ))}
+                </select>
+
+                {!selectedClientId && !isLoadingClients && (
+                  <p className="text-xs text-muted-foreground">
+                    Seleccioná el cliente que se lleva la deuda.
+                  </p>
+                )}
+              </div>
+
+              <div
+                role="alert"
+                className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2"
+              >
+                <Users className="size-4 shrink-0" />
+                Esta venta quedará registrada como deuda pendiente del cliente seleccionado.
+              </div>
             </div>
           )}
 

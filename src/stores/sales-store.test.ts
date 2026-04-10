@@ -195,10 +195,17 @@ describe('useSalesStore: clearCart', () => {
   });
 
   it('resetea paymentMethod a "cash"', () => {
-    useSalesStore.getState().setPaymentMethod('card');
+    useSalesStore.getState().setPaymentMethod('credit');
     useSalesStore.getState().clearCart();
 
     expect(useSalesStore.getState().paymentMethod).toBe('cash');
+  });
+
+  it('resetea selectedClientId a null', () => {
+    useSalesStore.getState().setSelectedClientId('client-1');
+    useSalesStore.getState().clearCart();
+
+    expect(useSalesStore.getState().selectedClientId).toBeNull();
   });
 
   it('resetea checkoutPhase a "idle"', () => {
@@ -222,13 +229,20 @@ describe('useSalesStore: completeSale', () => {
   });
 
   it('resetea amountReceived y paymentMethod', () => {
-    useSalesStore.getState().setPaymentMethod('card');
+    useSalesStore.getState().setPaymentMethod('credit');
     useSalesStore.getState().setAmountReceived(200);
     useSalesStore.getState().completeSale();
 
     const state = useSalesStore.getState();
     expect(state.amountReceived).toBe(0);
     expect(state.paymentMethod).toBe('cash');
+  });
+
+  it('resetea selectedClientId al completar venta', () => {
+    useSalesStore.getState().setSelectedClientId('client-1');
+    useSalesStore.getState().completeSale();
+
+    expect(useSalesStore.getState().selectedClientId).toBeNull();
   });
 
   it('establece checkoutPhase="completed" después de completar', () => {
@@ -260,6 +274,30 @@ describe('useSalesStore: resetCheckout', () => {
     useSalesStore.getState().resetCheckout();
 
     expect(useSalesStore.getState().amountReceived).toBe(0);
+  });
+
+  it('resetea selectedClientId a null', () => {
+    useSalesStore.getState().setSelectedClientId('client-1');
+    useSalesStore.getState().resetCheckout();
+
+    expect(useSalesStore.getState().selectedClientId).toBeNull();
+  });
+});
+
+describe('useSalesStore: selectedClientId', () => {
+  beforeEach(resetStore);
+
+  it('permite setear selectedClientId', () => {
+    useSalesStore.getState().setSelectedClientId('client-99');
+    expect(useSalesStore.getState().selectedClientId).toBe('client-99');
+  });
+
+  it('limpia selectedClientId al cambiar paymentMethod fuera de credit', () => {
+    useSalesStore.getState().setPaymentMethod('credit');
+    useSalesStore.getState().setSelectedClientId('client-99');
+    useSalesStore.getState().setPaymentMethod('cash');
+
+    expect(useSalesStore.getState().selectedClientId).toBeNull();
   });
 });
 

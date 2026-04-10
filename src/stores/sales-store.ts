@@ -29,6 +29,7 @@ const INITIAL_STATE: SalesState = {
   paymentMethod: 'cash',
   amountReceived: 0,
   checkoutPhase: 'idle',
+  selectedClientId: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -110,6 +111,7 @@ export const useSalesStore = create<SalesStore>((set) => ({
       amountReceived: 0,
       paymentMethod: 'cash',
       checkoutPhase: 'idle',
+      selectedClientId: null,
     }),
 
   // ─── Acciones de pago ─────────────────────────────────────────────────────
@@ -118,7 +120,16 @@ export const useSalesStore = create<SalesStore>((set) => ({
    * Establece el método de pago seleccionado.
    */
   setPaymentMethod: (method: PaymentMethod) =>
-    set({ paymentMethod: method }),
+    set((state) => ({
+      paymentMethod: method,
+      selectedClientId: method === 'credit' ? state.selectedClientId : null,
+    })),
+
+  /**
+   * Establece el cliente seleccionado para venta fiada.
+   */
+  setSelectedClientId: (clientId: string | null) =>
+    set({ selectedClientId: clientId }),
 
   /**
    * Establece el monto recibido del cliente (modo efectivo).
@@ -154,6 +165,7 @@ export const useSalesStore = create<SalesStore>((set) => ({
     set({
       checkoutPhase: 'idle',
       amountReceived: 0,
+      selectedClientId: null,
     }),
 }));
 

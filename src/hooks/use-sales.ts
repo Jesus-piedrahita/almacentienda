@@ -43,8 +43,10 @@ interface ApiSaleItem {
 interface ApiSale {
   id: number;
   user_id: number;
+  client_id: number | null;
+  client_name: string | null;
   state: 'completed' | 'cancelled';
-  payment_method: 'cash';
+  payment_method: 'cash' | 'credit';
   subtotal: number;
   total: number;
   created_at: string;          // ISO datetime
@@ -84,6 +86,8 @@ export function mapApiSaleToSale(apiSale: ApiSale): Sale {
   return {
     id: String(apiSale.id),
     userId: String(apiSale.user_id),
+    clientId: apiSale.client_id !== null ? String(apiSale.client_id) : null,
+    clientName: apiSale.client_name,
     state: apiSale.state,
     paymentMethod: apiSale.payment_method,
     subtotal: Number(apiSale.subtotal),
@@ -123,6 +127,9 @@ export function useCreateSale() {
     mutationFn: async (input: CreateSaleInput): Promise<Sale> => {
       const payload = {
         payment_method: input.paymentMethod,
+        ...(input.paymentMethod === 'credit' && input.clientId
+          ? { client_id: Number(input.clientId) }
+          : {}),
         items: input.items.map((item) => ({
           product_id: Number(item.productId),
           quantity: item.quantity,
@@ -138,6 +145,7 @@ export function useCreateSale() {
       // Invalidar inventario — la venta decrementa stock en el servidor
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.stats });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
   });
 }
