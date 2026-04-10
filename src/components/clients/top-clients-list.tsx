@@ -5,6 +5,7 @@
 
 import { Users, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCurrency } from '@/hooks/use-currency';
 import type { TopClient } from '@/types/clients';
 
 interface TopClientsListProps {
@@ -36,6 +37,8 @@ export function TopClientsList({
   isLoading,
   onSelectClient,
 }: TopClientsListProps) {
+  const { formatAmount } = useCurrency();
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -53,14 +56,6 @@ export function TopClientsList({
       </div>
     );
   }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(value);
-  };
-
   return (
     <div className="space-y-2">
       {clients.map((client, index) => (
@@ -91,7 +86,7 @@ export function TopClientsList({
             </div>
           </div>
           <div className="text-right">
-            <p className="font-bold text-destructive">{formatCurrency(client.totalDebt)}</p>
+              <p className="font-bold text-destructive">{formatAmount(client.totalDebt)}</p>
           </div>
         </div>
       ))}
@@ -114,6 +109,8 @@ export function ClientStatsCards({
   };
   isLoading: boolean;
 }) {
+  const { formatAmount } = useCurrency();
+
   if (isLoading || !stats) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -123,14 +120,6 @@ export function ClientStatsCards({
       </div>
     );
   }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(value);
-  };
-
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -153,7 +142,7 @@ export function ClientStatsCards({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-destructive">
-            {formatCurrency(stats.totalDebt)}
+            {formatAmount(stats.totalDebt)}
           </div>
           <p className="text-xs text-muted-foreground">
             En productos fiados

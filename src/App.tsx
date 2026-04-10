@@ -7,11 +7,13 @@ import { DashboardPage } from "./pages/dashboard-page"
 import { InventoryPage } from "./pages/inventory-page"
 import { ClientsPage } from "./pages/clients-page"
 import { SalesPage } from "./pages/sales-page"
+import { SettingsPage } from "./pages/settings-page"
 import { MainLayout } from "./components/layout/main-layout"
 import { AuthLayout } from "./components/auth/auth-layout"
 import { ProtectedRoute } from "./components/auth/protected-route"
 import { ConfirmDialogHost } from "./components/ui/confirm-dialog-host"
 import { useAuthStore } from "./stores/auth-store"
+import { useAppMonetary } from "./hooks/use-app-monetary"
 
 /**
  * Componente para redirigir a / si ya está autenticado.
@@ -30,6 +32,8 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
 
 function App() {
   const initialize = useAuthStore((state) => state.initialize)
+
+  useAppMonetary()
   
   // Inicializar estado de auth desde localStorage al cargar la app
   useEffect(() => {
@@ -66,6 +70,7 @@ function App() {
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/sales" element={<SalesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
 
           {/* Catch-all — redirige rutas no reconocidas al login */}

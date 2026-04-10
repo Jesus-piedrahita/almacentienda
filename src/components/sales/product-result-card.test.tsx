@@ -59,9 +59,9 @@ describe('ProductResultCard', () => {
     expect(screen.getByText('Bebidas')).toBeInTheDocument();
   });
 
-  it('renderiza el precio formateado en MXN', () => {
+  it('renderiza el precio formateado', () => {
     render(<ProductResultCard product={mockProduct} onAdd={onAdd} />);
-    // El precio $18.50 formateado como MXN puede variar según locale del entorno de prueba
+    // El precio puede variar según la moneda/locale activa del entorno de prueba
     // pero el número 18.5 debe estar presente en alguna forma
     expect(screen.getByText(/18[.,]5/)).toBeInTheDocument();
   });

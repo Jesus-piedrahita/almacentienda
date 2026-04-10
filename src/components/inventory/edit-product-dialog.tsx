@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useCurrency } from '@/hooks/use-currency';
 import type { Category, Product, UpdateProductInput } from '@/types/inventory';
 import { useUpdateProduct } from '@/hooks/use-inventory';
 
@@ -52,6 +53,7 @@ export function EditProductDialog({
   product,
 }: EditProductDialogProps) {
   const updateProductMutation = useUpdateProduct();
+  const { profile } = useCurrency();
 
   // Derivar el estado inicial a partir del producto seleccionado.
   // Se usa `product` como fuente de verdad para inicializar el formulario;
@@ -238,7 +240,7 @@ export function EditProductDialog({
           {/* Fila 4: Precio y Costo */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-price">Precio (MXN) *</Label>
+              <Label htmlFor="edit-price">Precio ({profile?.baseCurrency ?? 'base'}) *</Label>
               <Input
                 id="edit-price"
                 type="number"
@@ -255,7 +257,7 @@ export function EditProductDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-cost">Costo (MXN)</Label>
+              <Label htmlFor="edit-cost">Costo ({profile?.baseCurrency ?? 'base'})</Label>
               <Input
                 id="edit-cost"
                 type="number"

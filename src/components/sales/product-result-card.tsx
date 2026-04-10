@@ -13,20 +13,10 @@ import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useCurrency } from '@/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/types/inventory';
 import { getStockStatus, getStockStatusLabel, getStockStatusColor } from '@/types/inventory';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -47,7 +37,7 @@ export interface ProductResultCardProps {
  * Muestra:
  * - Nombre del producto
  * - Categoría (badge outline)
- * - Precio formateado en MXN
+ * - Precio formateado según perfil monetario activo
  * - Stock con color de estado (bien / alerta / crítico)
  * - Botón "+ Agregar" que llama a `onAdd`
  *
@@ -56,6 +46,7 @@ export interface ProductResultCardProps {
 export function ProductResultCard({ product, onAdd }: ProductResultCardProps) {
   const stockStatus = getStockStatus(product.quantity);
   const stockColor = getStockStatusColor(stockStatus);
+  const { formatAmount } = useCurrency();
 
   function handleClick() {
     onAdd(product);
@@ -89,7 +80,7 @@ export function ProductResultCard({ product, onAdd }: ProductResultCardProps) {
         {/* Precio y stock */}
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-primary">
-            {formatCurrency(product.price)}
+            {formatAmount(product.price)}
           </span>
 
           <span

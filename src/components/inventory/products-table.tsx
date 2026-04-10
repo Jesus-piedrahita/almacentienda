@@ -45,22 +45,13 @@ import {
 } from '@/types/inventory';
 import { cn } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useCurrency } from '@/hooks/use-currency';
 
 interface ProductsTableProps {
   products: Product[];
   isLoading: boolean;
   onEdit?: (product: Product) => void;
   onDelete?: (product: Product) => void;
-}
-
-/**
- * Formatea un número como moneda
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
 }
 
 /**
@@ -72,7 +63,7 @@ function formatDate(isoDate: string | undefined): string {
   // Parse YYYY-MM-DD without timezone conversion to avoid off-by-one day
   const [year, month, day] = isoDate.split('-').map(Number);
   if (!year || !month || !day) return '—';
-  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
     new Date(year, month - 1, day)
   );
 }
@@ -100,6 +91,7 @@ const ITEMS_PER_PAGE = 10;
  * ```
  */
 export function ProductsTable({ products, isLoading, onEdit, onDelete }: ProductsTableProps) {
+  const { formatAmount } = useCurrency();
   // inputValue: valor visible en el input (actualización inmediata)
   const [inputValue, setInputValue] = useState('');
 
@@ -272,7 +264,7 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
                       <TableCell>
                         <Badge variant="outline">{product.categoryName}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(product.price)}</TableCell>
+                      <TableCell className="text-right">{formatAmount(product.price)}</TableCell>
                       <TableCell className="text-center">{product.quantity}</TableCell>
                       <TableCell className="text-center">
                         <span className={cn(

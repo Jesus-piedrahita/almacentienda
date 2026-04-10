@@ -24,19 +24,9 @@ import {
   selectTotal,
   selectItemCount,
 } from '@/stores/sales-store';
+import { useCurrency } from '@/hooks/use-currency';
 import { CartItemRow } from './cart-item-row';
 import { EmptyCart } from './empty-cart';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -71,6 +61,8 @@ export function CartPanel() {
   const tax = selectTax(storeState);
   const total = selectTotal(storeState);
   const itemCount = selectItemCount(storeState);
+
+  const { formatAmount } = useCurrency();
 
   const isEmpty = items.length === 0;
 
@@ -129,15 +121,15 @@ export function CartPanel() {
           <div className="px-4 py-3 space-y-1.5 shrink-0">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal</span>
-              <span className="tabular-nums">{formatCurrency(subtotal)}</span>
+              <span className="tabular-nums">{formatAmount(subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>IVA (16%)</span>
-              <span className="tabular-nums">{formatCurrency(tax)}</span>
+              <span className="tabular-nums">{formatAmount(tax)}</span>
             </div>
             <div className="flex justify-between text-base font-bold">
               <span>Total</span>
-              <span className="tabular-nums text-primary">{formatCurrency(total)}</span>
+              <span className="tabular-nums text-primary">{formatAmount(total)}</span>
             </div>
           </div>
         </>
@@ -154,7 +146,7 @@ export function CartPanel() {
           Cobrar
           {!isEmpty && (
             <span className="ml-2 tabular-nums opacity-90">
-              {formatCurrency(total)}
+              {formatAmount(total)}
             </span>
           )}
         </Button>

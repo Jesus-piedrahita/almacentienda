@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useCurrency } from '@/hooks/use-currency';
 import { useRegisterPayment } from '@/hooks/use-clients';
 
 interface RegisterPaymentModalProps {
@@ -23,13 +24,6 @@ interface RegisterPaymentModalProps {
   maxAmount: number;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
-}
-
 export function RegisterPaymentModal({
   open,
   onOpenChange,
@@ -39,6 +33,7 @@ export function RegisterPaymentModal({
   maxAmount,
 }: RegisterPaymentModalProps) {
   const registerPayment = useRegisterPayment(clientId);
+  const { formatAmount } = useCurrency();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +81,7 @@ export function RegisterPaymentModal({
             Registrar abono
           </DialogTitle>
           <DialogDescription>
-            {saleLabel}. Saldo pendiente: {formatCurrency(maxAmount)}
+            {saleLabel}. Saldo pendiente: {formatAmount(maxAmount)}
           </DialogDescription>
         </DialogHeader>
 
@@ -104,7 +99,7 @@ export function RegisterPaymentModal({
               placeholder={String(maxAmount)}
             />
             <p className="text-xs text-muted-foreground">
-              Podés registrar hasta {formatCurrency(maxAmount)} en este abono.
+               Podés registrar hasta {formatAmount(maxAmount)} en este abono.
             </p>
           </div>
 

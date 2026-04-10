@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useCurrency } from '@/hooks/use-currency';
 import type { ClientCreditAccount, CreditSaleGroup } from '@/types/clients';
 import { RegisterPaymentModal } from './register-payment-modal';
 
@@ -23,16 +24,12 @@ interface CreditAccountDialogProps {
   clientId: string | null;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
-}
-
 function formatDateTime(value: string | null): string {
   if (!value) return 'Sin ticket';
-  return new Date(value).toLocaleString('es-MX');
+  return new Intl.DateTimeFormat('es-CO', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }
 
 function statusLabel(status: CreditSaleGroup['status']): string {
@@ -55,6 +52,7 @@ export function CreditAccountDialog({
   clientId,
 }: CreditAccountDialogProps) {
   const [selectedGroup, setSelectedGroup] = useState<CreditSaleGroup | null>(null);
+  const { formatAmount } = useCurrency();
 
   const saleLabel = useMemo(() => {
     if (!selectedGroup) return '';
@@ -90,15 +88,15 @@ export function CreditAccountDialog({
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">Deuda total</p>
-                  <p className="text-xl font-bold text-destructive">{formatCurrency(accountData.totalDebt)}</p>
+                  <p className="text-xl font-bold text-destructive">{formatAmount(accountData.totalDebt)}</p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">Abonado</p>
-                  <p className="text-xl font-bold text-primary">{formatCurrency(accountData.totalPaid)}</p>
+                  <p className="text-xl font-bold text-primary">{formatAmount(accountData.totalPaid)}</p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">Saldo pendiente</p>
-                  <p className="text-xl font-bold">{formatCurrency(accountData.balance)}</p>
+                  <p className="text-xl font-bold">{formatAmount(accountData.balance)}</p>
                 </div>
               </div>
 
@@ -131,10 +129,10 @@ export function CreditAccountDialog({
                             <div>
                               <p className="font-medium">{item.productName}</p>
                               <p className="text-muted-foreground">
-                                Cantidad: {item.quantity} · Unit: {formatCurrency(item.unitPrice)}
+                                 Cantidad: {item.quantity} · Unit: {formatAmount(item.unitPrice)}
                               </p>
                             </div>
-                            <p className="font-semibold">{formatCurrency(item.total)}</p>
+                             <p className="font-semibold">{formatAmount(item.total)}</p>
                           </div>
                         ))}
                       </div>
@@ -144,15 +142,15 @@ export function CreditAccountDialog({
                       <div className="grid gap-2 md:grid-cols-3 text-sm">
                         <div>
                           <p className="text-muted-foreground">Total vendido</p>
-                          <p className="font-semibold">{formatCurrency(sale.totalSale)}</p>
+                           <p className="font-semibold">{formatAmount(sale.totalSale)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Total abonado</p>
-                          <p className="font-semibold text-primary">{formatCurrency(sale.totalPaid)}</p>
+                           <p className="font-semibold text-primary">{formatAmount(sale.totalPaid)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Saldo</p>
-                          <p className="font-semibold">{formatCurrency(sale.balance)}</p>
+                           <p className="font-semibold">{formatAmount(sale.balance)}</p>
                         </div>
                       </div>
 
@@ -166,7 +164,7 @@ export function CreditAccountDialog({
                               <div key={payment.id} className="rounded-md bg-muted/50 p-3 text-sm">
                                 <div className="flex items-center justify-between gap-3">
                                   <span>{formatDateTime(payment.createdAt)}</span>
-                                  <span className="font-semibold text-primary">{formatCurrency(payment.amount)}</span>
+                                   <span className="font-semibold text-primary">{formatAmount(payment.amount)}</span>
                                 </div>
                                 {payment.note && (
                                   <p className="mt-1 text-muted-foreground">{payment.note}</p>

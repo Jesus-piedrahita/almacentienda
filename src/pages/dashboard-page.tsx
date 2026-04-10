@@ -6,6 +6,7 @@
 import { useAuthStore } from "@/stores/auth-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarcodeSearchWidget } from "@/components/dashboard/barcode-search-widget";
+import { useCurrency } from "@/hooks/use-currency";
 
 /**
  * DashboardPage - Página principal del sistema.
@@ -20,6 +21,7 @@ import { BarcodeSearchWidget } from "@/components/dashboard/barcode-search-widge
  */
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
+  const { formatAmount } = useCurrency();
 
   return (
     <div className="space-y-6">
@@ -54,7 +56,7 @@ export function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$0.00</div>
+            <div className="text-2xl font-bold">{formatAmount(0)}</div>
             <p className="text-xs text-muted-foreground">
               Ingresos del día
             </p>

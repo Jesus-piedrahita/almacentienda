@@ -10,6 +10,7 @@ import { Search, Loader2, AlertCircle, ScanBarcode } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useCurrency } from '@/hooks/use-currency';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useSearchProducts } from '@/hooks/use-inventory';
 import type { Product } from '@/types/inventory';
@@ -18,18 +19,15 @@ import type { Product } from '@/types/inventory';
 // Helpers
 // ============================================================
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
-}
-
 function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat('es-MX', {
+  return new Intl.DateTimeFormat('es-CO', {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function looksLikeScannedBarcode(query: string): boolean {
+  return /^\d{8,}$/.test(query.trim());
 }
 
 function stockStatusLabel(product: Product): {
@@ -109,7 +107,13 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function ResultsList({ products }: { products: Product[] }) {
+function ResultsList({
+  products,
+  formatAmount,
+}: {
+  products: Product[];
+  formatAmount: (amount: number) => string;
+}) {
   return (
     <ul
       className="divide-y divide-border"
@@ -138,14 +142,14 @@ function ResultsList({ products }: { products: Product[] }) {
                 </p>
               )}
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span>Costo: {formatCurrency(product.cost)}</span>
+                <span>Costo: {formatAmount(product.cost)}</span>
                 <span>Stock mín.: {product.minStock}</span>
                 <span>Últ. act.: {formatDateTime(product.updatedAt)}</span>
               </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="text-sm font-semibold text-foreground">
-                {formatCurrency(product.price)}
+                {formatAmount(product.price)}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground">
@@ -156,7 +160,7 @@ function ResultsList({ products }: { products: Product[] }) {
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground">
-                Valor stock: {formatCurrency(inventoryValue)}
+                Valor stock: {formatAmount(inventoryValue)}
               </span>
             </div>
           </li>
@@ -186,6 +190,8 @@ function ResultsList({ products }: { products: Product[] }) {
  */
 export function BarcodeSearchWidget() {
   const [inputValue, setInputValue] = useState('');
+  const [useSubmittedQuery, setUseSubmittedQuery] = useState(false);
+  const { formatAmount } = useCurrency();
 
   // submittedQuery conserva la última búsqueda enviada por Enter.
   // Esto nos permite limpiar el input visible después de un escaneo sin perder
@@ -198,7 +204,7 @@ export function BarcodeSearchWidget() {
   // Query efectiva:
   // - Si el input tiene texto visible, usamos el valor debounced (tipeo manual)
   // - Si el input está vacío, preservamos la última query enviada por Enter (scanner)
-  const searchQuery = inputValue.trim() === '' ? submittedQuery : debouncedInputValue.trim();
+  const searchQuery = useSubmittedQuery ? submittedQuery : debouncedInputValue.trim();
 
   const {
     data: products,
@@ -222,10 +228,14 @@ export function BarcodeSearchWidget() {
       const query = inputValue.trim();
       if (!query) return;
 
+      setUseSubmittedQuery(true);
       setSubmittedQuery(query);
-      // Limpiamos el input visible para que el próximo escaneo no se concatene
-      // con el código anterior.
-      setInputValue('');
+      // Solo limpiamos automáticamente cuando parece un escaneo real de código
+      // de barras. Para búsquedas manuales conviene preservar el texto visible
+      // para permitir edición o limpieza explícita.
+      if (looksLikeScannedBarcode(query)) {
+        setInputValue('');
+      }
     },
     [inputValue]
   );
@@ -255,14 +265,15 @@ export function BarcodeSearchWidget() {
         <Input
           type="text"
           placeholder="Escanear o escribir código / nombre…"
-          value={inputValue}
-          onChange={(e) => {
-            const val = e.target.value;
-            setInputValue(val);
-            // Reset inmediato al limpiar el input: no esperar el debounce de 300ms.
-            // Esto garantiza que el idle state aparezca sin delay cuando el usuario
-            // borra el campo manualmente.
-            if (val === '') {
+           value={inputValue}
+           onChange={(e) => {
+             const val = e.target.value;
+             setUseSubmittedQuery(false);
+             setInputValue(val);
+             // Reset inmediato al limpiar el input: no esperar el debounce de 300ms.
+             // Esto garantiza que el idle state aparezca sin delay cuando el usuario
+             // borra el campo manualmente.
+             if (val === '') {
               setSubmittedQuery('');
             }
           }}
@@ -277,7 +288,7 @@ export function BarcodeSearchWidget() {
         {showIdle && <IdleHint />}
         {showLoading && <LoadingState />}
         {showError && <ErrorState onRetry={handleRetry} />}
-        {showResults && <ResultsList products={products!} />}
+        {showResults && <ResultsList products={products!} formatAmount={formatAmount} />}
         {showEmpty && <EmptyState query={searchQuery} />}
       </CardContent>
     </Card>

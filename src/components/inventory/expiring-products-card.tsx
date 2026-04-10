@@ -23,7 +23,7 @@ function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);
   if (!year || !month || !day) return '—';
 
-  return new Intl.DateTimeFormat('es-MX', {
+  return new Intl.DateTimeFormat('es-CO', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

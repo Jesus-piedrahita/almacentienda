@@ -15,18 +15,8 @@
 import { Minus, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { useCurrency } from '@/hooks/use-currency';
 import type { CartItem } from '@/types/sales';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -53,6 +43,7 @@ export interface CartItemRowProps {
  */
 export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
   const lineSubtotal = item.product.price * item.quantity;
+  const { formatAmount } = useCurrency();
 
   function handleDecrement() {
     onUpdateQuantity(item.product.id, item.quantity - 1);
@@ -74,7 +65,7 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowPro
           {item.product.name}
         </p>
         <p className="text-xs text-muted-foreground">
-          {formatCurrency(item.product.price)} c/u
+          {formatAmount(item.product.price)} c/u
         </p>
       </div>
 
@@ -108,7 +99,7 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowPro
       {/* Subtotal de línea */}
       <div className="w-20 text-right shrink-0">
         <p className="text-sm font-semibold tabular-nums">
-          {formatCurrency(lineSubtotal)}
+          {formatAmount(lineSubtotal)}
         </p>
       </div>
 

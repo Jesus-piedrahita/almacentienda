@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useCurrency } from '@/hooks/use-currency';
 import type { Category, CreateProductInput } from '@/types/inventory';
 import { useAddProduct } from '@/hooks/use-inventory';
 
@@ -49,6 +50,7 @@ export function AddProductDialog({
   categories,
 }: AddProductDialogProps) {
   const addProductMutation = useAddProduct();
+  const { profile } = useCurrency();
 
   const [formData, setFormData] = useState<CreateProductInput>({
     barcode: '',
@@ -229,7 +231,7 @@ export function AddProductDialog({
           {/* Fila 4: Precio y Costo */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Precio (MXN) *</Label>
+              <Label htmlFor="price">Precio ({profile?.baseCurrency ?? 'base'}) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -246,7 +248,7 @@ export function AddProductDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cost">Costo (MXN)</Label>
+              <Label htmlFor="cost">Costo ({profile?.baseCurrency ?? 'base'})</Label>
               <Input
                 id="cost"
                 type="number"

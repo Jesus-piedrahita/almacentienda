@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useCurrency } from '@/hooks/use-currency';
 import type { ClientWithDebts, ClientDebt } from '@/types/clients';
 import { useMarkDebtPaid } from '@/hooks/use-clients';
 
@@ -51,13 +52,7 @@ export function ClientDetailsDialog({
   isLoading,
 }: ClientDetailsDialogProps) {
   const markDebtPaidMutation = useMarkDebtPaid();
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(value);
-  };
+  const { formatAmount } = useCurrency();
 
   const handleMarkPaid = async (debtId: string) => {
     try {
@@ -128,7 +123,7 @@ export function ClientDetailsDialog({
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Total pendiente</p>
               <p className="text-xl font-bold text-destructive">
-                {formatCurrency(clientData.totalDebt)}
+                {formatAmount(clientData.totalDebt)}
               </p>
             </div>
           </div>
@@ -147,7 +142,7 @@ export function ClientDetailsDialog({
                 <DebtItem
                   key={debt.id}
                   debt={debt}
-                  formatCurrency={formatCurrency}
+                  formatCurrency={formatAmount}
                   onMarkPaid={handleMarkPaid}
                   isMarkingPaid={markDebtPaidMutation.isPending}
                 />

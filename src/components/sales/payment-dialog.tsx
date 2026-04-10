@@ -51,6 +51,7 @@ import {
 import type { PaymentMethod } from '@/types/sales';
 import { useCreateSale } from '@/hooks/use-sales';
 import { useClients } from '@/hooks/use-clients';
+import { useCurrency } from '@/hooks/use-currency';
 
 // ---------------------------------------------------------------------------
 // Tipos internos
@@ -65,17 +66,6 @@ type ProcessingState = 'idle' | 'processing' | 'success';
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +126,8 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   // ─── Derivados de validación ────────────────────────────────────────────
   const isCash = paymentMethod === 'cash';
   const isCredit = paymentMethod === 'credit';
+  const { formatAmount, displayCurrency } = useCurrency();
+
   const canConfirm =
     processing === 'idle' &&
     (isCash ? amountReceived >= total : true) &&
@@ -253,16 +245,16 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
           <div className="rounded-lg bg-muted/50 p-4 space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal</span>
-              <span className="tabular-nums">{formatCurrency(subtotal)}</span>
+              <span className="tabular-nums">{formatAmount(subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>IVA (16%)</span>
-              <span className="tabular-nums">{formatCurrency(tax)}</span>
+              <span className="tabular-nums">{formatAmount(tax)}</span>
             </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total</span>
-              <span className="tabular-nums text-primary">{formatCurrency(total)}</span>
+              <span className="tabular-nums text-primary">{formatAmount(total)}</span>
             </div>
           </div>
 
@@ -297,13 +289,15 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
           {isCash && (
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="amount-received">Monto recibido (MXN)</Label>
+                <Label htmlFor="amount-received">
+                  Monto recibido {displayCurrency ? `(${displayCurrency})` : ''}
+                </Label>
                 <Input
                   id="amount-received"
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder={formatCurrency(total)}
+                  placeholder={formatAmount(total)}
                   value={amountReceived > 0 ? amountReceived : ''}
                   onChange={handleAmountChange}
                   disabled={processing !== 'idle'}
@@ -317,7 +311,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
                 {/* Monto insuficiente */}
                 {showInsufficient && (
                   <p className="text-xs text-destructive">
-                    Faltan {formatCurrency(total - amountReceived)} para cubrir el total.
+                    Faltan {formatAmount(total - amountReceived)} para cubrir el total.
                   </p>
                 )}
               </div>
@@ -329,7 +323,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
                     Cambio al cliente
                   </span>
                   <span className="text-lg font-bold text-green-700 dark:text-green-400 tabular-nums">
-                    {formatCurrency(change)}
+                    {formatAmount(change)}
                   </span>
                 </div>
               )}

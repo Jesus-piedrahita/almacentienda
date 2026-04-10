@@ -7,22 +7,13 @@ import { Package, Layers, DollarSign, TrendingUp } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { InventoryStats } from '@/types/inventory';
-
-/**
- * Formatea un número como moneda
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value);
-}
+import { useCurrency } from '@/hooks/use-currency';
 
 /**
  * Formatea un número con separadores de miles
  */
 function formatNumber(value: number): string {
-  return new Intl.NumberFormat('es-MX').format(value);
+  return new Intl.NumberFormat('es-CO').format(value);
 }
 
 interface InventoryStatsCardsProps {
@@ -45,6 +36,7 @@ interface InventoryStatsCardsProps {
  * ```
  */
 export function InventoryStatsCards({ stats, isLoading }: InventoryStatsCardsProps) {
+  const { formatAmount } = useCurrency();
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -111,7 +103,7 @@ export function InventoryStatsCards({ stats, isLoading }: InventoryStatsCardsPro
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {stats ? formatCurrency(stats.totalValue) : '$0.00'}
+            {stats ? formatAmount(stats.totalValue) : formatAmount(0)}
           </div>
           <p className="text-xs text-muted-foreground">
             Precio × cantidad

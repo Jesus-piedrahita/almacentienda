@@ -78,6 +78,7 @@ export function RegisterForm({ className }: { className?: string }) {
               id="email"
               type="email"
               placeholder="tu@ejemplo.com"
+              autoComplete="email"
               autoFocus
               {...register("email")}
               aria-invalid={!!errors.email}
@@ -92,6 +93,7 @@ export function RegisterForm({ className }: { className?: string }) {
               id="password"
               type="password"
               placeholder="••••••••"
+              autoComplete="new-password"
               {...register("password")}
               aria-invalid={!!errors.password}
             />
@@ -105,6 +107,7 @@ export function RegisterForm({ className }: { className?: string }) {
               id="confirmPassword"
               type="password"
               placeholder="••••••••"
+              autoComplete="new-password"
               {...register("confirmPassword")}
               aria-invalid={!!errors.confirmPassword}
             />

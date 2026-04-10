@@ -5,6 +5,7 @@
  */
 
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/use-currency';
 import type { CategorySummary } from '@/types/inventory';
 
 interface CategoryChartProps {
@@ -31,18 +32,6 @@ function getCategoryColor(index: number): string {
 }
 
 /**
- * Formatea un número como moneda
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-/**
  * CategoryChart - Gráfico de distribución por categoría.
  *
  * Muestra barras horizontales con:
@@ -58,6 +47,7 @@ function formatCurrency(value: number): string {
  * ```
  */
 export function CategoryChart({ categories, isLoading }: CategoryChartProps) {
+  const { formatAmount } = useCurrency();
   // Estado de carga inicial: mostrar skeleton para evitar el falso "No hay categorías"
   if (isLoading) {
     return (
@@ -113,7 +103,7 @@ export function CategoryChart({ categories, isLoading }: CategoryChartProps) {
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span>{category.productCount} producto{category.productCount !== 1 ? 's' : ''}</span>
                 <span className="font-medium text-foreground">
-                  {formatCurrency(category.totalValue)}
+                  {formatAmount(category.totalValue)}
                 </span>
               </div>
             </div>
