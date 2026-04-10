@@ -49,6 +49,7 @@ export interface ClientDebt {
   clientId: string;
   productId: string;
   productName: string;
+  saleId?: string | null;
   quantity: number;
   unitPrice: number;
   total: number;
@@ -94,4 +95,62 @@ export interface ClientStats {
   totalDebt: number;
   clientsWithDebt: number;
   topClients: TopClient[];
+}
+
+/**
+ * Ítem individual dentro de una venta fiada agrupada en cuenta corriente.
+ */
+export interface CreditSaleItem {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+/**
+ * Abono registrado sobre una venta o sobre el bloque legado sin ticket.
+ */
+export interface DebtPayment {
+  id: string;
+  clientId: string;
+  saleId: string | null;
+  amount: number;
+  note?: string;
+  createdAt: string;
+}
+
+/**
+ * Grupo de cuenta corriente agrupado por venta.
+ */
+export interface CreditSaleGroup {
+  saleId: string | null;
+  saleDate: string | null;
+  label?: string;
+  items: CreditSaleItem[];
+  totalSale: number;
+  totalPaid: number;
+  balance: number;
+  status: 'paid' | 'partial' | 'unpaid';
+  payments: DebtPayment[];
+}
+
+/**
+ * Respuesta completa de cuenta corriente agrupada del cliente.
+ */
+export interface ClientCreditAccount {
+  clientId: string;
+  clientName: string;
+  totalDebt: number;
+  totalPaid: number;
+  balance: number;
+  sales: CreditSaleGroup[];
+}
+
+/**
+ * Input para registrar un abono.
+ */
+export interface RegisterPaymentInput {
+  saleId: string | null;
+  amount: number;
+  note?: string;
 }

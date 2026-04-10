@@ -11,9 +11,9 @@ import { Button } from '@/components/ui/button';
 
 import { ClientList } from '@/components/clients/client-list';
 import { ClientDialog } from '@/components/clients/client-dialog';
-import { ClientDetailsDialog } from '@/components/clients/client-details-dialog';
+import { CreditAccountDialog } from '@/components/clients/credit-account-dialog';
 import { TopClientsList, ClientStatsCards } from '@/components/clients/top-clients-list';
-import { useClients, useClientStats, useClientWithDebts, useDeleteClient } from '@/hooks/use-clients';
+import { useClients, useClientStats, useClientCreditAccount, useDeleteClient } from '@/hooks/use-clients';
 import { confirmDelete, showError } from '@/hooks/use-confirm-dialog';
 import type { Client } from '@/types/clients';
 
@@ -42,7 +42,7 @@ export function ClientsPage() {
   // Queries
   const { data: clientsData, isLoading: isLoadingClients } = useClients();
   const { data: stats, isLoading: isLoadingStats } = useClientStats();
-  const { data: clientWithDebts, isLoading: isLoadingDebts } = useClientWithDebts(detailsClientId || '');
+  const { data: clientCreditAccount, isLoading: isLoadingCreditAccount } = useClientCreditAccount(detailsClientId || '');
 
   // Mutations
   const deleteClientMutation = useDeleteClient();
@@ -165,12 +165,13 @@ export function ClientsPage() {
         client={selectedClient}
       />
 
-      {/* Dialog de detalles del cliente */}
-      <ClientDetailsDialog
+      {/* Dialog de cuenta corriente del cliente */}
+      <CreditAccountDialog
         open={isDetailsDialogOpen}
         onOpenChange={handleDetailsDialogClose}
-        clientData={clientWithDebts || null}
-        isLoading={isLoadingDebts}
+        accountData={clientCreditAccount || null}
+        isLoading={isLoadingCreditAccount}
+        clientId={detailsClientId}
       />
     </div>
   );

@@ -5,7 +5,20 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import type { Client, CreateClientInput, UpdateClientInput, ClientWithDebts, ClientStats, TopClient, ClientDebt } from '@/types/clients';
+import type {
+  Client,
+  CreateClientInput,
+  UpdateClientInput,
+  ClientWithDebts,
+  ClientStats,
+  TopClient,
+  ClientDebt,
+  ClientCreditAccount,
+  CreditSaleGroup,
+  CreditSaleItem,
+  DebtPayment,
+  RegisterPaymentInput,
+} from '@/types/clients';
 
 // ============================================================
 // Types de la API
@@ -28,6 +41,7 @@ interface ApiClientDebt {
   client_id: number;
   product_id: number;
   product_name: string;
+  sale_id?: number | null;
   quantity: number;
   unit_price: number;
   total: number;
@@ -66,6 +80,43 @@ interface ApiClientStats {
   top_clients: ApiTopClient[];
 }
 
+interface ApiDebtPayment {
+  id: number;
+  client_id: number;
+  sale_id: number | null;
+  amount: number;
+  note?: string;
+  created_at: string;
+}
+
+interface ApiCreditSaleItem {
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+interface ApiCreditSaleGroup {
+  sale_id: number | null;
+  sale_date: string | null;
+  label?: string;
+  items: ApiCreditSaleItem[];
+  total_sale: number;
+  total_paid: number;
+  balance: number;
+  status: 'paid' | 'partial' | 'unpaid';
+  payments: ApiDebtPayment[];
+}
+
+interface ApiClientCreditAccount {
+  client_id: number;
+  client_name: string;
+  total_debt: number;
+  total_paid: number;
+  balance: number;
+  sales: ApiCreditSaleGroup[];
+}
+
 // ============================================================
 // Mappers
 // ============================================================
@@ -90,12 +141,58 @@ function mapApiClientDebtToClientDebt(apiDebt: ApiClientDebt): ClientDebt {
     clientId: String(apiDebt.client_id),
     productId: String(apiDebt.product_id),
     productName: apiDebt.product_name,
+    saleId: apiDebt.sale_id !== undefined ? (apiDebt.sale_id !== null ? String(apiDebt.sale_id) : null) : undefined,
     quantity: apiDebt.quantity,
     unitPrice: Number(apiDebt.unit_price),
     total: Number(apiDebt.total),
     isPaid: apiDebt.is_paid,
     createdAt: apiDebt.created_at,
     updatedAt: apiDebt.updated_at,
+  };
+}
+
+function mapApiDebtPayment(apiPayment: ApiDebtPayment): DebtPayment {
+  return {
+    id: String(apiPayment.id),
+    clientId: String(apiPayment.client_id),
+    saleId: apiPayment.sale_id !== null ? String(apiPayment.sale_id) : null,
+    amount: Number(apiPayment.amount),
+    note: apiPayment.note,
+    createdAt: apiPayment.created_at,
+  };
+}
+
+function mapApiCreditSaleItem(apiItem: ApiCreditSaleItem): CreditSaleItem {
+  return {
+    productName: apiItem.product_name,
+    quantity: apiItem.quantity,
+    unitPrice: Number(apiItem.unit_price),
+    total: Number(apiItem.total),
+  };
+}
+
+function mapApiCreditSaleGroup(apiGroup: ApiCreditSaleGroup): CreditSaleGroup {
+  return {
+    saleId: apiGroup.sale_id !== null ? String(apiGroup.sale_id) : null,
+    saleDate: apiGroup.sale_date,
+    label: apiGroup.label,
+    items: apiGroup.items.map(mapApiCreditSaleItem),
+    totalSale: Number(apiGroup.total_sale),
+    totalPaid: Number(apiGroup.total_paid),
+    balance: Number(apiGroup.balance),
+    status: apiGroup.status,
+    payments: apiGroup.payments.map(mapApiDebtPayment),
+  };
+}
+
+function mapApiClientCreditAccount(apiAccount: ApiClientCreditAccount): ClientCreditAccount {
+  return {
+    clientId: String(apiAccount.client_id),
+    clientName: apiAccount.client_name,
+    totalDebt: Number(apiAccount.total_debt),
+    totalPaid: Number(apiAccount.total_paid),
+    balance: Number(apiAccount.balance),
+    sales: apiAccount.sales.map(mapApiCreditSaleGroup),
   };
 }
 
@@ -143,6 +240,7 @@ export const queryKeys = {
   clients: ['clients'] as const,
   client: (id: string) => ['clients', id] as const,
   clientDebts: (id: string) => ['clients', id, 'debts'] as const,
+  clientCreditAccount: (id: string) => ['clients', id, 'credit-account'] as const,
   clientStats: ['clients', 'stats'] as const,
 };
 
@@ -191,6 +289,21 @@ export function useClientWithDebts(clientId: string) {
     },
     enabled: !!clientId,
     staleTime: 1000 * 60 * 1, // 1 minuto
+  });
+}
+
+/**
+ * Hook para obtener la cuenta corriente agrupada por venta del cliente.
+ */
+export function useClientCreditAccount(clientId: string) {
+  return useQuery({
+    queryKey: queryKeys.clientCreditAccount(clientId),
+    queryFn: async (): Promise<ClientCreditAccount> => {
+      const response = await api.get<ApiClientCreditAccount>(`/api/clients/${clientId}/credit-account`);
+      return mapApiClientCreditAccount(response.data);
+    },
+    enabled: !!clientId,
+    staleTime: 1000 * 60 * 1,
   });
 }
 
@@ -278,6 +391,30 @@ export function useMarkDebtPaid() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.clientStats });
+    },
+  });
+}
+
+/**
+ * Hook para registrar un abono en la cuenta corriente del cliente.
+ */
+export function useRegisterPayment(clientId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: RegisterPaymentInput): Promise<DebtPayment> => {
+      const response = await api.post<ApiDebtPayment>(`/api/clients/${clientId}/payments`, {
+        sale_id: input.saleId ? Number(input.saleId) : null,
+        amount: input.amount,
+        note: input.note,
+      });
+      return mapApiDebtPayment(response.data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.clientCreditAccount(clientId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clientDebts(clientId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clientStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients });
     },
   });
 }
