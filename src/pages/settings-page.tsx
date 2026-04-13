@@ -22,7 +22,9 @@ import {
 } from '@/hooks/use-monetary';
 import { formatExchangeRate } from '@/lib/currency';
 import { useMonetaryStore, selectEffectiveDisplayCurrency } from '@/stores/monetary-store';
+import { useThemeStore } from '@/stores/theme-store';
 import type { CurrencyCode } from '@/types/monetary';
+import type { ThemePreference } from '@/lib/theme';
 
 function formatSyncDate(value: string | null): string {
   if (!value) {
@@ -37,6 +39,9 @@ function formatSyncDate(value: string | null): string {
 
 export function SettingsPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
+  const themePreference = useThemeStore((state) => state.themePreference);
+  const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
+  const setThemePreference = useThemeStore((state) => state.setThemePreference);
   const profile = useMonetaryStore((state) => state.profile);
   const exchangeRates = useMonetaryStore((state) => state.exchangeRates);
   const effectiveDisplayCurrency = useMonetaryStore(selectEffectiveDisplayCurrency);
@@ -68,6 +73,10 @@ export function SettingsPage() {
       const apiError = error as AxiosError<{ detail?: string }>;
       setSyncError(apiError.response?.data?.detail ?? 'No se pudo sincronizar las tasas en este momento.');
     }
+  }
+
+  function handleThemePreferenceChange(preference: ThemePreference) {
+    setThemePreference(preference);
   }
 
   if (isLoading) {
@@ -105,6 +114,41 @@ export function SettingsPage() {
           Perfil monetario global del sistema según país de operación
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tema global</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Preferencia visual</Label>
+            <div className="flex flex-wrap gap-2">
+              {(['light', 'dark', 'system'] as ThemePreference[]).map((preference) => {
+                const isActive = themePreference === preference;
+
+                return (
+                  <Button
+                    key={preference}
+                    type="button"
+                    variant={isActive ? 'default' : 'outline'}
+                    onClick={() => handleThemePreferenceChange(preference)}
+                  >
+                    {preference === 'light'
+                      ? 'Claro'
+                      : preference === 'dark'
+                        ? 'Oscuro'
+                        : 'Sistema'}
+                  </Button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              El tema efectivo actual es <span className="font-medium">{effectiveTheme}</span>.
+              {themePreference === 'system' ? ' Se sincroniza con la preferencia del sistema operativo.' : ''}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

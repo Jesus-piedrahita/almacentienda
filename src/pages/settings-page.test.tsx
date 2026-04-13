@@ -5,6 +5,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 import { SettingsPage } from './settings-page';
 import { useMonetaryStore } from '@/stores/monetary-store';
+import { useThemeStore } from '@/stores/theme-store';
 
 const syncRatesMutateAsync = vi.fn();
 
@@ -67,6 +68,11 @@ describe('SettingsPage', () => {
     syncRatesMutateAsync.mockReset();
     syncRatesMutateAsync.mockResolvedValue({});
 
+    useThemeStore.setState({
+      themePreference: 'system',
+      effectiveTheme: 'light',
+    });
+
     useMonetaryStore.setState({
       profile: {
         countryCode: 'CO',
@@ -93,6 +99,10 @@ describe('SettingsPage', () => {
 
     expect(screen.getByText('Configuración')).toBeInTheDocument();
     expect(screen.getByText(/CO · Bloqueado tras setup inicial/i)).toBeInTheDocument();
+    expect(screen.getByText('Tema global')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Claro' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Oscuro' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sistema' })).toBeInTheDocument();
     expect(screen.getByText('Monedas permitidas')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'COP' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'USD' })).toBeInTheDocument();
@@ -110,6 +120,20 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       expect(useMonetaryStore.getState().displayCurrencyOverride).toBe('USD');
+    });
+  });
+
+  it('allows switching global theme preference', async () => {
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <SettingsPage />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Oscuro' }));
+
+    await waitFor(() => {
+      expect(useThemeStore.getState().themePreference).toBe('dark');
     });
   });
 

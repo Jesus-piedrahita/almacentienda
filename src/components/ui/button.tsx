@@ -3,7 +3,6 @@
  * Construido sobre Base UI Button con estilos personalizados mediante Tailwind CSS.
  */
 
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import type { ButtonHTMLAttributes } from "react"
 
