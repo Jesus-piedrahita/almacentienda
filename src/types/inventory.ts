@@ -37,6 +37,7 @@ export interface Product {
   categoryName: string;
   price: number;
   cost: number;
+  markupPct?: number;
   quantity: number;
   minStock: number; // Stock mínimo para alerta
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
@@ -81,6 +82,7 @@ export interface CreateProductInput {
   categoryId: string;
   price: number;
   cost: number;
+  markupPct?: number;
   quantity: number;
   minStock: number;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
@@ -97,10 +99,41 @@ export interface UpdateProductInput {
   categoryId?: string;
   price?: number;
   cost?: number;
+  markupPct?: number;
   quantity?: number;
   minStock?: number;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
   expiration_date?: string;
+}
+
+export type BulkMarkupScope = 'selected' | 'category' | 'all';
+
+export interface BulkMarkupSelectedInput {
+  scope: 'selected';
+  productIds: string[];
+  markupPct: number;
+}
+
+export interface BulkMarkupCategoryInput {
+  scope: 'category';
+  categoryId: number;
+  markupPct: number;
+}
+
+export interface BulkMarkupAllInput {
+  scope: 'all';
+  markupPct: number;
+}
+
+export type BulkMarkupInput =
+  | BulkMarkupSelectedInput
+  | BulkMarkupCategoryInput
+  | BulkMarkupAllInput;
+
+export interface BulkMarkupResult {
+  updatedCount: number;
+  skippedCount: number;
+  updatedProducts: Product[];
 }
 
 /**

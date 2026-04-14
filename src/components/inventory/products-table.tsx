@@ -52,6 +52,8 @@ interface ProductsTableProps {
   isLoading: boolean;
   onEdit?: (product: Product) => void;
   onDelete?: (product: Product) => void;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (selectedIds: Set<string>) => void;
 }
 
 /**
@@ -90,7 +92,7 @@ const ITEMS_PER_PAGE = 10;
  * <ProductsTable products={products} isLoading={false} />
  * ```
  */
-export function ProductsTable({ products, isLoading, onEdit, onDelete }: ProductsTableProps) {
+export function ProductsTable({ products, isLoading, onEdit, onDelete, selectedIds, onSelectionChange }: ProductsTableProps) {
   const { formatAmount } = useCurrency();
   // inputValue: valor visible en el input (actualización inmediata)
   const [inputValue, setInputValue] = useState('');
@@ -164,6 +166,37 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
   // al menos un producto con fecha de vencimiento.
   const hasExpiration = paginatedProducts.some((product) => !!product.expiration_date);
 
+  const visibleIds = paginatedProducts.map((product) => product.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds?.has(id));
+
+  const toggleVisibleSelection = (checked: boolean) => {
+    if (!onSelectionChange) return;
+    const next = new Set(selectedIds ?? []);
+
+    for (const id of visibleIds) {
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+    }
+
+    onSelectionChange(next);
+  };
+
+  const toggleRowSelection = (productId: string, checked: boolean) => {
+    if (!onSelectionChange) return;
+    const next = new Set(selectedIds ?? []);
+
+    if (checked) {
+      next.add(productId);
+    } else {
+      next.delete(productId);
+    }
+
+    onSelectionChange(next);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4" data-testid="products-table-loading">
@@ -229,6 +262,14 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10 text-center">
+                    <input
+                      aria-label="Seleccionar productos visibles"
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={(e) => toggleVisibleSelection(e.target.checked)}
+                    />
+                  </TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Código de Barras</TableHead>
                   <TableHead>Categoría</TableHead>
@@ -250,6 +291,14 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete }: Product
 
                   return (
                     <TableRow key={product.id}>
+                      <TableCell className="text-center">
+                        <input
+                          aria-label={`Seleccionar ${product.name}`}
+                          type="checkbox"
+                          checked={selectedIds?.has(product.id) ?? false}
+                          onChange={(e) => toggleRowSelection(product.id, e.target.checked)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{product.name}</p>

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCurrency } from '@/hooks/use-currency';
+import { formatMarkup, markupFromPrice, priceFromMarkup } from '@/lib/markup';
 import type { Category, CreateProductInput } from '@/types/inventory';
 import { useAddProduct } from '@/hooks/use-inventory';
 
@@ -59,12 +60,14 @@ export function AddProductDialog({
     categoryId: '',
     price: 0,
     cost: 0,
+    markupPct: undefined,
     quantity: 0,
     minStock: 5,
     expiration_date: undefined,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof CreateProductInput, string>>>({});
+  const [markupPct, setMarkupPct] = useState<number | ''>('');
 
   const isLoading = addProductMutation.isPending;
 
@@ -74,6 +77,53 @@ export function AddProductDialog({
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const handleCostChange = (value: number) => {
+    setFormData((prev) => {
+      const nextFormData = { ...prev, cost: value };
+
+      const derivedPrice = typeof markupPct === 'number' ? priceFromMarkup(value, markupPct) : null;
+
+      if (derivedPrice !== null) {
+        nextFormData.price = derivedPrice;
+      }
+
+      return nextFormData;
+    });
+
+    if (value <= 0) {
+      setMarkupPct('');
+    }
+
+    if (errors.cost) {
+      setErrors((prev) => ({ ...prev, cost: undefined }));
+    }
+  };
+
+  const handleMarkupChange = (value: number) => {
+    setMarkupPct(value);
+    setFormData((prev) => ({ ...prev, markupPct: value }));
+
+    const derivedPrice = priceFromMarkup(formData.cost, value);
+
+    if (derivedPrice !== null) {
+      setFormData((prev) => ({ ...prev, price: derivedPrice }));
+    }
+
+    if (errors.price) {
+      setErrors((prev) => ({ ...prev, price: undefined }));
+    }
+  };
+
+  const handlePriceChange = (value: number) => {
+    handleChange('price', value);
+    const derivedMarkup = markupFromPrice(formData.cost, value);
+    setMarkupPct(derivedMarkup ?? '');
+    setFormData((prev) => ({
+      ...prev,
+      markupPct: derivedMarkup ?? undefined,
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -116,6 +166,7 @@ export function AddProductDialog({
       // Normalise optional fields: convert empty strings to undefined
       const payload: CreateProductInput = {
         ...formData,
+        markupPct: markupPct === '' ? undefined : markupPct,
         expiration_date: formData.expiration_date?.trim() || undefined,
       };
       await addProductMutation.mutateAsync(payload);
@@ -135,11 +186,13 @@ export function AddProductDialog({
       categoryId: '',
       price: 0,
       cost: 0,
+      markupPct: undefined,
       quantity: 0,
       minStock: 5,
       expiration_date: undefined,
     });
     setErrors({});
+    setMarkupPct('');
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -229,7 +282,7 @@ export function AddProductDialog({
           </div>
 
           {/* Fila 4: Precio y Costo */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="price">Precio ({profile?.baseCurrency ?? 'base'}) *</Label>
               <Input
@@ -239,7 +292,7 @@ export function AddProductDialog({
                 min="0"
                 placeholder="0.00"
                 value={formData.price || ''}
-                onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)}
+                onChange={(e) => handlePriceChange(parseFloat(e.target.value) || 0)}
                 disabled={isLoading}
               />
               {errors.price && (
@@ -256,12 +309,30 @@ export function AddProductDialog({
                 min="0"
                 placeholder="0.00"
                 value={formData.cost || ''}
-                onChange={(e) => handleChange('cost', parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleCostChange(parseFloat(e.target.value) || 0)}
                 disabled={isLoading}
               />
               {errors.cost && (
                 <p className="text-xs text-destructive">{errors.cost}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="markupPct">Markup (%)</Label>
+              <Input
+                id="markupPct"
+                type="number"
+                step="0.01"
+                placeholder="0"
+                value={markupPct === '' ? '' : formatMarkup(markupPct)}
+                onChange={(e) => handleMarkupChange(parseFloat(e.target.value) || 0)}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                {formData.cost > 0
+                  ? 'El porcentaje ajusta automáticamente el precio de venta.'
+                  : 'Cargá un costo mayor a 0 para calcular markup automáticamente.'}
+              </p>
             </div>
           </div>
 

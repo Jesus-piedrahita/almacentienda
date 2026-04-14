@@ -6,7 +6,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import api from '@/lib/api';
-import type { Product, Category, InventoryStats, CreateProductInput, CreateCategoryInput, ExpiringProduct } from '@/types/inventory';
+import type {
+  Product,
+  Category,
+  InventoryStats,
+  CreateProductInput,
+  CreateCategoryInput,
+  ExpiringProduct,
+  BulkMarkupInput,
+  BulkMarkupResult,
+} from '@/types/inventory';
 
 // ============================================================
 // Types de la API
@@ -29,6 +38,7 @@ interface ApiProduct {
   category_name: string;
   price: number;
   cost: number;
+  markup_pct?: number | null;
   quantity: number;
   min_stock: number;
   created_at: string;
@@ -82,6 +92,12 @@ interface ApiStats {
   }>;
 }
 
+interface ApiBulkMarkupResult {
+  updated_count: number;
+  skipped_count: number;
+  updated_products: ApiProduct[];
+}
+
 // ============================================================
 // Mappers
 // ============================================================
@@ -104,6 +120,10 @@ function mapApiProductToProduct(apiProduct: ApiProduct): Product {
     categoryName: apiProduct.category_name,
     price: Number(apiProduct.price),
     cost: Number(apiProduct.cost),
+    markupPct:
+      apiProduct.markup_pct !== undefined && apiProduct.markup_pct !== null
+        ? Number(apiProduct.markup_pct)
+        : undefined,
     quantity: apiProduct.quantity,
     minStock: apiProduct.min_stock,
     expiration_date: apiProduct.expiration_date,
@@ -139,6 +159,14 @@ function mapApiStatsToInventoryStats(apiStats: ApiStats): InventoryStats {
       totalQuantity: cat.total_quantity,
       totalValue: cat.total_value,
     })),
+  };
+}
+
+function mapApiBulkMarkupResult(apiResult: ApiBulkMarkupResult): BulkMarkupResult {
+  return {
+    updatedCount: apiResult.updated_count,
+    skippedCount: apiResult.skipped_count,
+    updatedProducts: apiResult.updated_products.map(mapApiProductToProduct),
   };
 }
 
@@ -268,7 +296,9 @@ export function useAddProduct() {
       const productData = {
         ...input,
         category_id: Number(input.categoryId),
+        markup_pct: input.markupPct ?? null,
       };
+      delete productData.categoryId;
       const response = await api.post<ApiProduct>('/api/inventory/products', productData);
       return mapApiProductToProduct(response.data);
     },
@@ -292,6 +322,10 @@ export function useUpdateProduct() {
       if (updates.categoryId) {
         updateData.category_id = Number(updates.categoryId);
         delete updateData.categoryId;
+      }
+      if ('markupPct' in updates) {
+        updateData.markup_pct = updates.markupPct ?? null;
+        delete updateData.markupPct;
       }
 
       const response = await api.patch<ApiProduct>(
@@ -320,6 +354,34 @@ export function useDeleteProduct() {
     },
     onSuccess: () => {
       // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    },
+  });
+}
+
+export function useBulkMarkup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: BulkMarkupInput): Promise<BulkMarkupResult> => {
+      const payload: Record<string, unknown> = {
+        scope: input.scope,
+        markup_pct: input.markupPct,
+      };
+
+      if (input.scope === 'selected') {
+        payload.product_ids = input.productIds.map(Number);
+      }
+
+      if (input.scope === 'category') {
+        payload.category_id = input.categoryId;
+      }
+
+      const response = await api.post<ApiBulkMarkupResult>('/api/inventory/products/bulk-markup', payload);
+      return mapApiBulkMarkupResult(response.data);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.stats });
     },

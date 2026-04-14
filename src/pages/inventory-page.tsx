@@ -18,6 +18,7 @@ import { AddProductDialog } from '@/components/inventory/add-product-dialog';
 import { CategoryDialog } from '@/components/inventory/category-dialog';
 import { EditProductDialog } from '@/components/inventory/edit-product-dialog';
 import { ExpiringProductsCard } from '@/components/inventory/expiring-products-card';
+import { BulkMarkupDialog } from '@/components/inventory/bulk-markup-dialog';
 import { useProducts, useCategories, useInventoryStats, useDeleteProduct, useDeleteCategory, useExpiringProducts } from '@/hooks/use-inventory';
 import { confirmDelete, showError } from '@/hooks/use-confirm-dialog';
 import type { Product, Category } from '@/types/inventory';
@@ -42,8 +43,10 @@ export function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isBulkMarkupDialogOpen, setIsBulkMarkupDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Queries con React Query
   const { data: productsData, isLoading: isLoadingProducts } = useProducts(1);
@@ -134,6 +137,9 @@ export function InventoryPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsBulkMarkupDialogOpen(true)}>
+            Actualizar Markup en Lote
+          </Button>
           <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
             <Plus className="size-4" />
             Agregar Producto
@@ -225,9 +231,19 @@ export function InventoryPage() {
             isLoading={isLoadingProducts}
             onEdit={handleEditProduct}
             onDelete={handleDeleteProduct}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         </CardContent>
       </Card>
+
+      <BulkMarkupDialog
+        open={isBulkMarkupDialogOpen}
+        onOpenChange={setIsBulkMarkupDialogOpen}
+        categories={categories ?? []}
+        selectedIds={selectedIds}
+        onSuccess={() => setSelectedIds(new Set())}
+      />
 
       {/* Dialog para agregar producto */}
       <AddProductDialog
