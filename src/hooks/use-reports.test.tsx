@@ -8,9 +8,12 @@ import api from '@/lib/api';
 import {
   getDefaultReportFilters,
   mapApiCreditCollectionReport,
+  mapApiProfitByDimensionReport,
   mapApiProductsPerformanceReport,
   mapApiReportsOverview,
+  reportsQueryKeys,
   useCreditCollectionReport,
+  useProfitByDimensionReport,
   useProductsPerformanceReport,
   useReportsOverview,
 } from './use-reports';
@@ -111,6 +114,9 @@ describe('use-reports', () => {
         product_name: 'Arroz',
         total_units_sold: 10,
         total_revenue: 200,
+        total_cost: 120,
+        gross_profit: 80,
+        margin_pct: 40,
       },
       top_products: [],
       top_revenue_products: [
@@ -119,14 +125,91 @@ describe('use-reports', () => {
           product_name: 'Aceite',
           total_units_sold: 5,
           total_revenue: 300,
+          total_cost: null,
+          gross_profit: null,
+          margin_pct: null,
         },
       ],
       low_rotation_products: [],
       categories: [],
+      has_incomplete_cost_data: true,
     });
 
     expect(result.bestSeller?.productId).toBe('1');
+    expect(result.bestSeller?.grossProfit).toBe(80);
     expect(result.topRevenueProducts[0].productName).toBe('Aceite');
+    expect(result.topRevenueProducts[0].totalCost).toBeNull();
+    expect(result.hasIncompleteCostData).toBe(true);
+  });
+
+  it('preserves real zero cost/profit values instead of coercing to null', () => {
+    const result = mapApiProductsPerformanceReport({
+      range_start: '2026-04-01T00:00:00Z',
+      range_end: '2026-04-30T23:59:59Z',
+      best_seller: {
+        product_id: 1,
+        product_name: 'Promo Sticker',
+        total_units_sold: 10,
+        total_revenue: 50,
+        total_cost: 0,
+        gross_profit: 50,
+        margin_pct: 100,
+      },
+      top_products: [],
+      top_revenue_products: [],
+      low_rotation_products: [],
+      categories: [],
+      has_incomplete_cost_data: false,
+    });
+
+    expect(result.bestSeller?.totalCost).toBe(0);
+    expect(result.bestSeller?.grossProfit).toBe(50);
+    expect(result.bestSeller?.marginPct).toBe(100);
+  });
+
+  it('maps profit-by-dimension payload preserving nulls and warning flag', () => {
+    const result = mapApiProfitByDimensionReport({
+      range_start: '2026-04-01T00:00:00Z',
+      range_end: '2026-04-30T23:59:59Z',
+      group_by: 'week',
+      categories: [
+        {
+          category_name: 'Despensa',
+          total_revenue: 300,
+          total_cost: null,
+          gross_profit: null,
+          margin_pct: null,
+          has_incomplete_cost_data: true,
+        },
+      ],
+      top_by_profit: [
+        {
+          product_id: 1,
+          product_name: 'Arroz',
+          category_name: 'Despensa',
+          total_revenue: 200,
+          total_cost: 120,
+          gross_profit: 80,
+          margin_pct: 40,
+          has_incomplete_cost_data: false,
+        },
+      ],
+      series: [
+        {
+          bucket_label: '01 Apr - 07 Apr',
+          bucket_start: '2026-04-01T00:00:00Z',
+          total_revenue: 300,
+          gross_profit: null,
+          margin_pct: null,
+        },
+      ],
+      has_incomplete_cost_data: true,
+    });
+
+    expect(result.groupBy).toBe('week');
+    expect(result.categories[0].grossProfit).toBeNull();
+    expect(result.topByProfit[0].grossProfit).toBe(80);
+    expect(result.hasIncompleteCostData).toBe(true);
   });
 
   it('builds default report filters with a 30-day window', () => {
@@ -142,6 +225,16 @@ describe('use-reports', () => {
     });
 
     vi.useRealTimers();
+  });
+
+  it('builds profit-by-dimension query key with shared filters and grouping', () => {
+    expect(
+      reportsQueryKeys.profitByDimension({
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+        groupBy: 'week',
+      })
+    ).toEqual(['reports', 'profit-by-dimension', '2026-04-01', '2026-04-30', 'week']);
   });
 
   it('fetches overview report with mapped params', async () => {
@@ -237,11 +330,15 @@ describe('use-reports', () => {
           product_name: 'Arroz',
           total_units_sold: 10,
           total_revenue: 200,
+          total_cost: 120,
+          gross_profit: 80,
+          margin_pct: 40,
         },
         top_products: [],
         top_revenue_products: [],
         low_rotation_products: [],
         categories: [],
+        has_incomplete_cost_data: false,
       },
     });
 
@@ -265,5 +362,63 @@ describe('use-reports', () => {
       },
     });
     expect(result.current.data?.bestSeller?.productName).toBe('Arroz');
+    expect(result.current.data?.bestSeller?.marginPct).toBe(40);
+    expect(result.current.data?.hasIncompleteCostData).toBe(false);
+  });
+
+  it('fetches profit-by-dimension report only when enabled', async () => {
+    const queryClient = makeQueryClient();
+
+    const { result } = renderHook(
+      () =>
+        useProfitByDimensionReport(
+          {
+            startDate: '2026-04-01',
+            endDate: '2026-04-30',
+            groupBy: 'week',
+          },
+          false
+        ),
+      { wrapper: makeWrapper(queryClient) }
+    );
+
+    expect(mockedApiGet).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('fetches profit-by-dimension report with mapped params', async () => {
+    const queryClient = makeQueryClient();
+    mockedApiGet.mockResolvedValueOnce({
+      data: {
+        range_start: '2026-04-01T00:00:00Z',
+        range_end: '2026-04-30T23:59:59Z',
+        group_by: 'week',
+        categories: [],
+        top_by_profit: [],
+        series: [],
+        has_incomplete_cost_data: false,
+      },
+    });
+
+    const { result } = renderHook(
+      () =>
+        useProfitByDimensionReport({
+          startDate: '2026-04-01',
+          endDate: '2026-04-30',
+          groupBy: 'week',
+        }),
+      { wrapper: makeWrapper(queryClient) }
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockedApiGet).toHaveBeenCalledWith('/api/reports/profit-by-dimension', {
+      params: {
+        start: '2026-04-01T00:00:00',
+        end: '2026-04-30T23:59:59',
+        group_by: 'week',
+      },
+    });
+    expect(result.current.data?.groupBy).toBe('week');
   });
 });

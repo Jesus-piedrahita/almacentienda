@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi, describe, it, beforeEach, expect } from 'vitest';
 
 import { ReportsPage } from './reports-page';
@@ -14,6 +15,7 @@ vi.mock('@/hooks/use-reports', () => ({
   useReportsOverview: vi.fn(),
   useCreditCollectionReport: vi.fn(),
   useProductsPerformanceReport: vi.fn(),
+  useProfitByDimensionReport: vi.fn(),
 }));
 
 import * as reportsHooks from '@/hooks/use-reports';
@@ -21,10 +23,12 @@ import * as reportsHooks from '@/hooks/use-reports';
 const mockedUseReportsOverview = vi.mocked(reportsHooks.useReportsOverview);
 const mockedUseCreditCollectionReport = vi.mocked(reportsHooks.useCreditCollectionReport);
 const mockedUseProductsPerformanceReport = vi.mocked(reportsHooks.useProductsPerformanceReport);
+const mockedUseProfitByDimensionReport = vi.mocked(reportsHooks.useProfitByDimensionReport);
 
 describe('ReportsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedUseProfitByDimensionReport.mockReturnValue({ isPending: false, isError: false, data: undefined } as never);
   });
 
   it('renders loading state', () => {
@@ -188,5 +192,68 @@ describe('ReportsPage', () => {
     expect(screen.getByTestId('reports-credit-section')).toBeInTheDocument();
     expect(screen.getByTestId('reports-top-debtors-section')).toBeInTheDocument();
     expect(screen.getByTestId('reports-products-section')).toBeInTheDocument();
+  });
+
+  it('toggles to profitability view and enables the profitability query', async () => {
+    const user = userEvent.setup();
+
+    mockedUseReportsOverview.mockReturnValue({ isPending: false, isError: false, data: undefined } as never);
+    mockedUseCreditCollectionReport.mockReturnValue({ isPending: false, isError: false, data: undefined } as never);
+    mockedUseProductsPerformanceReport.mockReturnValue({ isPending: false, isError: false, data: undefined } as never);
+    mockedUseProfitByDimensionReport.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        rangeStart: '2026-04-01T00:00:00Z',
+        rangeEnd: '2026-04-30T23:59:59Z',
+        groupBy: 'day',
+        hasIncompleteCostData: false,
+        categories: [],
+        topByProfit: [],
+        series: [],
+      },
+    } as never);
+
+    render(<ReportsPage />);
+
+    expect(mockedUseProfitByDimensionReport).toHaveBeenCalledWith(
+      { startDate: '2026-04-01', endDate: '2026-04-30', groupBy: 'day' },
+      false
+    );
+
+    await user.click(screen.getByRole('button', { name: /Rentabilidad/i }));
+
+    expect(screen.getByTestId('profit-by-dimension-section')).toBeInTheDocument();
+  });
+
+  it('reuses shared filters for profitability after changing the group by selector', async () => {
+    const user = userEvent.setup();
+
+    mockedUseReportsOverview.mockReturnValue({ isPending: false, isError: false, data: undefined } as never);
+    mockedUseCreditCollectionReport.mockReturnValue({ isPending: false, isError: false, data: undefined } as never);
+    mockedUseProductsPerformanceReport.mockReturnValue({ isPending: false, isError: false, data: undefined } as never);
+    mockedUseProfitByDimensionReport.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        rangeStart: '2026-04-01T00:00:00Z',
+        rangeEnd: '2026-04-30T23:59:59Z',
+        groupBy: 'week',
+        hasIncompleteCostData: false,
+        categories: [],
+        topByProfit: [],
+        series: [],
+      },
+    } as never);
+
+    render(<ReportsPage />);
+
+    await user.selectOptions(screen.getByRole('combobox'), 'week');
+    await user.click(screen.getByRole('button', { name: /Rentabilidad/i }));
+
+    expect(mockedUseProfitByDimensionReport).toHaveBeenLastCalledWith(
+      { startDate: '2026-04-01', endDate: '2026-04-30', groupBy: 'week' },
+      true
+    );
   });
 });

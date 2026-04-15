@@ -2,11 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 
 import api from '@/lib/api';
 import type {
+  CategoryProfitItem,
   CategoryPerformanceItem,
   CreditCollectionPoint,
   CreditCollectionReport,
   CreditCollectionSummary,
+  ProfitBucketPoint,
+  ProfitByDimensionReport,
   ProductPerformanceItem,
+  ProductProfitItem,
   ProductsPerformanceReport,
   ReportDateRangeFilter,
   ReportGroupBy,
@@ -72,12 +76,18 @@ interface ApiProductPerformanceItem {
   product_name: string;
   total_units_sold: number;
   total_revenue: number;
+  total_cost: number | null;
+  gross_profit: number | null;
+  margin_pct: number | null;
 }
 
 interface ApiCategoryPerformanceItem {
   category_name: string;
   total_units_sold: number;
   total_revenue: number;
+  total_cost: number | null;
+  gross_profit: number | null;
+  margin_pct: number | null;
 }
 
 interface ApiProductsPerformanceReport {
@@ -88,6 +98,45 @@ interface ApiProductsPerformanceReport {
   top_revenue_products: ApiProductPerformanceItem[];
   low_rotation_products: ApiProductPerformanceItem[];
   categories: ApiCategoryPerformanceItem[];
+  has_incomplete_cost_data: boolean;
+}
+
+interface ApiCategoryProfitItem {
+  category_name: string;
+  total_revenue: number;
+  total_cost: number | null;
+  gross_profit: number | null;
+  margin_pct: number | null;
+  has_incomplete_cost_data: boolean;
+}
+
+interface ApiProductProfitItem {
+  product_id: number;
+  product_name: string;
+  category_name: string;
+  total_revenue: number;
+  total_cost: number | null;
+  gross_profit: number | null;
+  margin_pct: number | null;
+  has_incomplete_cost_data: boolean;
+}
+
+interface ApiProfitBucketPoint {
+  bucket_label: string;
+  bucket_start: string;
+  total_revenue: number;
+  gross_profit: number | null;
+  margin_pct: number | null;
+}
+
+interface ApiProfitByDimensionReport {
+  range_start: string;
+  range_end: string;
+  group_by: ReportGroupBy;
+  categories: ApiCategoryProfitItem[];
+  top_by_profit: ApiProductProfitItem[];
+  series: ApiProfitBucketPoint[];
+  has_incomplete_cost_data: boolean;
 }
 
 function formatDateInput(date: Date): string {
@@ -185,6 +234,9 @@ function mapApiProductPerformanceItem(item: ApiProductPerformanceItem): ProductP
     productName: item.product_name,
     totalUnitsSold: item.total_units_sold,
     totalRevenue: Number(item.total_revenue),
+    totalCost: item.total_cost !== null ? Number(item.total_cost) : null,
+    grossProfit: item.gross_profit !== null ? Number(item.gross_profit) : null,
+    marginPct: item.margin_pct !== null ? Number(item.margin_pct) : null,
   };
 }
 
@@ -193,6 +245,43 @@ function mapApiCategoryPerformanceItem(item: ApiCategoryPerformanceItem): Catego
     categoryName: item.category_name,
     totalUnitsSold: item.total_units_sold,
     totalRevenue: Number(item.total_revenue),
+    totalCost: item.total_cost !== null ? Number(item.total_cost) : null,
+    grossProfit: item.gross_profit !== null ? Number(item.gross_profit) : null,
+    marginPct: item.margin_pct !== null ? Number(item.margin_pct) : null,
+  };
+}
+
+function mapApiCategoryProfitItem(item: ApiCategoryProfitItem): CategoryProfitItem {
+  return {
+    categoryName: item.category_name,
+    totalRevenue: Number(item.total_revenue),
+    totalCost: item.total_cost !== null ? Number(item.total_cost) : null,
+    grossProfit: item.gross_profit !== null ? Number(item.gross_profit) : null,
+    marginPct: item.margin_pct !== null ? Number(item.margin_pct) : null,
+    hasIncompleteCostData: item.has_incomplete_cost_data,
+  };
+}
+
+function mapApiProductProfitItem(item: ApiProductProfitItem): ProductProfitItem {
+  return {
+    productId: String(item.product_id),
+    productName: item.product_name,
+    categoryName: item.category_name,
+    totalRevenue: Number(item.total_revenue),
+    totalCost: item.total_cost !== null ? Number(item.total_cost) : null,
+    grossProfit: item.gross_profit !== null ? Number(item.gross_profit) : null,
+    marginPct: item.margin_pct !== null ? Number(item.margin_pct) : null,
+    hasIncompleteCostData: item.has_incomplete_cost_data,
+  };
+}
+
+function mapApiProfitBucketPoint(item: ApiProfitBucketPoint): ProfitBucketPoint {
+  return {
+    bucketLabel: item.bucket_label,
+    bucketStart: item.bucket_start,
+    totalRevenue: Number(item.total_revenue),
+    grossProfit: item.gross_profit !== null ? Number(item.gross_profit) : null,
+    marginPct: item.margin_pct !== null ? Number(item.margin_pct) : null,
   };
 }
 
@@ -205,6 +294,19 @@ export function mapApiProductsPerformanceReport(apiReport: ApiProductsPerformanc
     topRevenueProducts: apiReport.top_revenue_products.map(mapApiProductPerformanceItem),
     lowRotationProducts: apiReport.low_rotation_products.map(mapApiProductPerformanceItem),
     categories: apiReport.categories.map(mapApiCategoryPerformanceItem),
+    hasIncompleteCostData: apiReport.has_incomplete_cost_data,
+  };
+}
+
+export function mapApiProfitByDimensionReport(apiReport: ApiProfitByDimensionReport): ProfitByDimensionReport {
+  return {
+    rangeStart: apiReport.range_start,
+    rangeEnd: apiReport.range_end,
+    groupBy: apiReport.group_by,
+    categories: apiReport.categories.map(mapApiCategoryProfitItem),
+    topByProfit: apiReport.top_by_profit.map(mapApiProductProfitItem),
+    series: apiReport.series.map(mapApiProfitBucketPoint),
+    hasIncompleteCostData: apiReport.has_incomplete_cost_data,
   };
 }
 
@@ -219,6 +321,13 @@ export const reportsQueryKeys = {
     filters.groupBy ?? 'auto',
   ] as const,
   productsPerformance: (filters: ReportDateRangeFilter) => ['reports', 'products-performance', filters.startDate, filters.endDate] as const,
+  profitByDimension: (filters: ReportDateRangeFilter) => [
+    'reports',
+    'profit-by-dimension',
+    filters.startDate,
+    filters.endDate,
+    filters.groupBy ?? 'auto',
+  ] as const,
 };
 
 export function getDefaultReportFilters(): ReportDateRangeFilter {
@@ -269,5 +378,19 @@ export function useProductsPerformanceReport(filters: ReportDateRangeFilter) {
       return mapApiProductsPerformanceReport(response.data);
     },
     staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useProfitByDimensionReport(filters: ReportDateRangeFilter, enabled: boolean = true) {
+  return useQuery({
+    queryKey: reportsQueryKeys.profitByDimension(filters),
+    queryFn: async (): Promise<ProfitByDimensionReport> => {
+      const response = await api.get<ApiProfitByDimensionReport>('/api/reports/profit-by-dimension', {
+        params: buildReportParams(filters),
+      });
+      return mapApiProfitByDimensionReport(response.data);
+    },
+    staleTime: 1000 * 60 * 2,
+    enabled,
   });
 }

@@ -37,6 +37,7 @@ interface ApiSaleItem {
   product_name: string;
   quantity: number;
   unit_price: number;   // Decimal serializado como number en JSON
+  unit_cost: number | null;
   subtotal: number;     // Decimal serializado como number en JSON
 }
 
@@ -78,6 +79,7 @@ function mapApiSaleItemToSaleItem(apiItem: ApiSaleItem) {
     productName: apiItem.product_name,
     quantity: apiItem.quantity,
     unitPrice: Number(apiItem.unit_price),
+    unitCost: apiItem.unit_cost !== null ? Number(apiItem.unit_cost) : null,
     subtotal: Number(apiItem.subtotal),
   };
 }

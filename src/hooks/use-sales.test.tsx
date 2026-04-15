@@ -72,6 +72,7 @@ const mockApiSaleItem = {
   product_name: 'Coca Cola 600ml',
   quantity: 2,
   unit_price: 18.5,
+  unit_cost: 11.25,
   subtotal: 37.0,
 };
 
@@ -133,7 +134,26 @@ describe('mapApiSaleToSale', () => {
     expect(item.productName).toBe('Coca Cola 600ml');
     expect(item.quantity).toBe(2);
     expect(item.unitPrice).toBe(18.5);
+    expect(item.unitCost).toBe(11.25);
     expect(item.subtotal).toBe(37.0);
+  });
+
+  it('preserva unitCost null sin coerción', () => {
+    const sale = mapApiSaleToSale({
+      ...mockApiSale,
+      items: [{ ...mockApiSaleItem, unit_cost: null }],
+    });
+
+    expect(sale.items[0].unitCost).toBeNull();
+  });
+
+  it('preserva unitCost cero real sin convertirlo en null', () => {
+    const sale = mapApiSaleToSale({
+      ...mockApiSale,
+      items: [{ ...mockApiSaleItem, unit_cost: 0 }],
+    });
+
+    expect(sale.items[0].unitCost).toBe(0);
   });
 
   it('mapea campos snake_case a camelCase correctamente', () => {

@@ -69,12 +69,18 @@ export interface ProductPerformanceItem {
   productName: string;
   totalUnitsSold: number;
   totalRevenue: number;
+  totalCost: number | null;
+  grossProfit: number | null;
+  marginPct: number | null;
 }
 
 export interface CategoryPerformanceItem {
   categoryName: string;
   totalUnitsSold: number;
   totalRevenue: number;
+  totalCost: number | null;
+  grossProfit: number | null;
+  marginPct: number | null;
 }
 
 export interface ProductsPerformanceReport {
@@ -85,4 +91,43 @@ export interface ProductsPerformanceReport {
   topRevenueProducts: ProductPerformanceItem[];
   lowRotationProducts: ProductPerformanceItem[];
   categories: CategoryPerformanceItem[];
+  hasIncompleteCostData: boolean;
+}
+
+export interface CategoryProfitItem {
+  categoryName: string;
+  totalRevenue: number;
+  totalCost: number | null;
+  grossProfit: number | null;
+  marginPct: number | null;
+  hasIncompleteCostData: boolean;
+}
+
+export interface ProductProfitItem {
+  productId: string;
+  productName: string;
+  categoryName: string;
+  totalRevenue: number;
+  totalCost: number | null;
+  grossProfit: number | null;
+  marginPct: number | null;
+  hasIncompleteCostData: boolean;
+}
+
+export interface ProfitBucketPoint {
+  bucketLabel: string;
+  bucketStart: string;
+  totalRevenue: number;
+  grossProfit: number | null;
+  marginPct: number | null;
+}
+
+export interface ProfitByDimensionReport {
+  rangeStart: string;
+  rangeEnd: string;
+  groupBy: ReportGroupBy;
+  categories: CategoryProfitItem[];
+  topByProfit: ProductProfitItem[];
+  series: ProfitBucketPoint[];
+  hasIncompleteCostData: boolean;
 }

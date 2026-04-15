@@ -95,6 +95,7 @@ export interface SaleItem {
   productName: string;
   quantity: number;
   unitPrice: number;
+  unitCost: number | null;
   subtotal: number;
 }
 
