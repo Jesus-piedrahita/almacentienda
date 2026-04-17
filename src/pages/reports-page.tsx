@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { CreditCollectionChart } from '@/components/reports/credit-collection-chart';
 import { OverviewSummaryCards } from '@/components/reports/overview-summary-cards';
+import { ReportsPageSkeleton } from '@/components/reports/reports-page-skeleton';
 import { ProfitByDimensionSection } from '@/components/reports/profit-by-dimension-section';
 import { ProductsPerformanceSection } from '@/components/reports/products-performance-section';
 import { ReportsFilters } from '@/components/reports/reports-filters';
@@ -71,17 +72,7 @@ export function ReportsPage() {
     Boolean(productsPerformanceQuery.data);
 
   if (isInitialLoading) {
-    return (
-      <div className="space-y-6" data-testid="reports-page-loading">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <BarChart3 className="size-8 text-primary" />
-            Reportes
-          </h1>
-          <p className="text-muted-foreground">Cargando tablero de ventas, crédito y productos...</p>
-        </div>
-      </div>
-    );
+    return <ReportsPageSkeleton />;
   }
 
   if (hasBlockingError) {

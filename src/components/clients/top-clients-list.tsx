@@ -5,6 +5,7 @@
 
 import { Users, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useCurrency } from '@/hooks/use-currency';
 import type { TopClient } from '@/types/clients';
 
@@ -43,7 +44,7 @@ export function TopClientsList({
     return (
       <div className="space-y-2">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-12 w-full animate-pulse rounded-lg bg-muted" />
+          <Skeleton key={i} className="h-12 w-full rounded-lg" />
         ))}
       </div>
     );
@@ -115,7 +116,7 @@ export function ClientStatsCards({
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
+          <Skeleton key={i} className="h-24 rounded-lg" />
         ))}
       </div>
     );

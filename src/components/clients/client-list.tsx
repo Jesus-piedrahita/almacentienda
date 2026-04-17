@@ -5,6 +5,7 @@
 
 import { Edit, Trash2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { Client } from '@/types/clients';
 
 interface ClientListProps {
@@ -47,7 +48,7 @@ export function ClientList({
     return (
       <div className="space-y-2">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-16 w-full animate-pulse rounded-lg bg-muted" />
+          <Skeleton key={i} className="h-16 w-full rounded-lg" />
         ))}
       </div>
     );

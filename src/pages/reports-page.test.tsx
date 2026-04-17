@@ -39,6 +39,7 @@ describe('ReportsPage', () => {
     render(<ReportsPage />);
 
     expect(screen.getByTestId('reports-page-loading')).toBeInTheDocument();
+    expect(screen.queryByText(/Cargando tablero de ventas, crédito y productos/i)).not.toBeInTheDocument();
   });
 
   it('renders blocking error state', () => {

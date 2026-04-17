@@ -3,10 +3,8 @@
  *
  * Verifica:
  * 1. Usuarios NO autenticados pueden acceder a /login y /register.
- * 2. Usuarios autenticados son redirigidos a / desde /login y /register
- *    (lógica AuthRedirect aplicada a nivel de layout, no por ruta individual).
- * 3. La lógica de redirección está centralizada en la layout route y no
- *    duplicada en cada ruta hija.
+ * 2. Usuarios autenticados son redirigidos a / desde /login y /register.
+ * 3. La lógica de auth pública usa una sola ruta parametrizada `/:authMode`.
  *
  * Estrategia de mocking:
  * - `@/stores/auth-store` → controlamos isAuthenticated dinámicamente.
@@ -19,7 +17,8 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, Navigate } from 'react-router';
 import { vi, describe, it, expect, afterEach } from 'vitest';
-import { AuthLayout } from '@/components/auth/auth-layout';
+import { AuthInitializingShell } from '@/components/auth/auth-initializing-shell';
+import { AuthPage } from '@/pages/auth-page';
 import { useAuthStore } from '@/stores/auth-store';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -48,6 +47,12 @@ vi.mock('@/components/auth/register-form', () => ({
  */
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
+  if (!isInitialized) {
+    return <AuthInitializingShell />;
+  }
+
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
@@ -71,24 +76,20 @@ function DashboardPage() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Renderiza el árbol de rutas de auth (layout route padre + hijos)
- * equivalente al fragmento relevante de App.tsx.
+ * Renderiza el árbol de rutas públicas auth equivalente al fragmento relevante de App.tsx.
  */
 function renderAuthRoutes(initialPath: string) {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
-        {/* Auth layout route — replica fiel del fragmento en App.tsx */}
         <Route
           element={
             <AuthRedirect>
-              <AuthLayout />
+              <AuthPage />
             </AuthRedirect>
           }
-        >
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
+          path="/:authMode"
+        />
 
         {/* Ruta destino de redirección para usuarios autenticados */}
         <Route path="/" element={<DashboardPage />} />
@@ -99,7 +100,7 @@ function renderAuthRoutes(initialPath: string) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('App auth routes — AuthRedirect a nivel de layout', () => {
+describe('App auth routes — AuthRedirect con ruta auth unificada', () => {
   afterEach(() => {
     // Limpiar el store de auth entre tests para evitar contaminación
     useAuthStore.setState({
@@ -114,21 +115,21 @@ describe('App auth routes — AuthRedirect a nivel de layout', () => {
   // ── Usuarios NO autenticados ────────────────────────────────────────────────
 
   it('usuario no autenticado puede acceder a /login', () => {
-    useAuthStore.setState({ isAuthenticated: false });
+    useAuthStore.setState({ isAuthenticated: false, isInitialized: true });
 
     renderAuthRoutes('/login');
 
-    expect(screen.getByTestId('login-form')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Iniciar Sesión/i })).toBeInTheDocument();
     // No debe redirigir a dashboard
     expect(screen.queryByTestId('dashboard')).not.toBeInTheDocument();
   });
 
   it('usuario no autenticado puede acceder a /register', () => {
-    useAuthStore.setState({ isAuthenticated: false });
+    useAuthStore.setState({ isAuthenticated: false, isInitialized: true });
 
     renderAuthRoutes('/register');
 
-    expect(screen.getByTestId('register-form')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Crear Cuenta/i })).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard')).not.toBeInTheDocument();
   });
 
@@ -137,6 +138,7 @@ describe('App auth routes — AuthRedirect a nivel de layout', () => {
   it('usuario autenticado es redirigido de /login a /', () => {
     useAuthStore.setState({
       isAuthenticated: true,
+      isInitialized: true,
       token: 'fake-token',
       user: { id: 1, email: 'user@test.com', is_active: true, created_at: '2026-01-01T00:00:00Z' },
     });
@@ -152,6 +154,7 @@ describe('App auth routes — AuthRedirect a nivel de layout', () => {
   it('usuario autenticado es redirigido de /register a /', () => {
     useAuthStore.setState({
       isAuthenticated: true,
+      isInitialized: true,
       token: 'fake-token',
       user: { id: 1, email: 'user@test.com', is_active: true, created_at: '2026-01-01T00:00:00Z' },
     });
@@ -162,10 +165,10 @@ describe('App auth routes — AuthRedirect a nivel de layout', () => {
     expect(screen.getByTestId('dashboard')).toBeInTheDocument();
   });
 
-  // ── Verificación de layout centralizado ────────────────────────────────────
+  // ── Verificación de shell auth centralizado ───────────────────────────────
 
   it('el branding de AuthLayout es visible para usuario no autenticado en /login', () => {
-    useAuthStore.setState({ isAuthenticated: false });
+    useAuthStore.setState({ isAuthenticated: false, isInitialized: true });
 
     renderAuthRoutes('/login');
 
@@ -174,7 +177,7 @@ describe('App auth routes — AuthRedirect a nivel de layout', () => {
   });
 
   it('el branding de AuthLayout NO aparece cuando usuario autenticado es redirigido', () => {
-    useAuthStore.setState({ isAuthenticated: true, token: 'fake-token' });
+    useAuthStore.setState({ isAuthenticated: true, isInitialized: true, token: 'fake-token' });
 
     renderAuthRoutes('/login');
 
@@ -182,6 +185,17 @@ describe('App auth routes — AuthRedirect a nivel de layout', () => {
     expect(screen.queryByText('Almacén Tienda')).not.toBeInTheDocument();
     // El dashboard sí debe mostrarse
     expect(screen.getByTestId('dashboard')).toBeInTheDocument();
+  });
+
+  it('muestra un shell neutro mientras auth todavía no se inicializó', () => {
+    useAuthStore.setState({ isAuthenticated: false, isInitialized: false, token: null, user: null });
+
+    renderAuthRoutes('/login');
+
+    expect(screen.getByTestId('auth-initializing-shell')).toBeInTheDocument();
+    expect(screen.queryByTestId('login-form')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('register-form')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard')).not.toBeInTheDocument();
   });
 });
 
@@ -192,5 +206,18 @@ describe('App module — estructura de rutas auth', () => {
     const appModule = await import('@/App');
     expect(appModule.default).toBeDefined();
     expect(typeof appModule.default).toBe('function');
+  });
+
+  it('AuthPage valida el parámetro authMode y redirige a /login si es inválido', () => {
+    render(
+      <MemoryRouter initialEntries={['/foo']}>
+        <Routes>
+          <Route path="/:authMode" element={<AuthPage />} />
+          <Route path="/login" element={<div data-testid="login-route">login</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('login-route')).toBeInTheDocument();
   });
 });

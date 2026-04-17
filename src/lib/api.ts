@@ -12,6 +12,33 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
  */
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+function parseDevDelayMs(rawValue: string | undefined): number {
+  if (!rawValue) {
+    return 0;
+  }
+
+  const parsed = Number(rawValue);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+
+  return parsed;
+}
+
+function shouldEnableDevApiDelay(): boolean {
+  return import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEV_API_DELAY === 'true';
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+const DEV_API_DELAY_MS = parseDevDelayMs(import.meta.env.VITE_DEV_API_DELAY_MS);
+const IS_DEV_API_DELAY_ENABLED = shouldEnableDevApiDelay() && DEV_API_DELAY_MS > 0;
+
 /**
  * Creates and configures an Axios instance with interceptors.
  * - Adds JWT token to requests if available
@@ -49,10 +76,18 @@ api.interceptors.request.use(
  * Response interceptor - handles 401 errors globally
  */
 api.interceptors.response.use(
-  (response) => {
+  async (response) => {
+    if (IS_DEV_API_DELAY_ENABLED) {
+      await delay(DEV_API_DELAY_MS);
+    }
+
     return response;
   },
-  (error: AxiosError<{ detail?: string }>) => {
+  async (error: AxiosError<{ detail?: string }>) => {
+    if (IS_DEV_API_DELAY_ENABLED) {
+      await delay(DEV_API_DELAY_MS);
+    }
+
     if (error.response?.status === 401) {
       // Clear auth data and redirect to login
       localStorage.removeItem('auth_token');
@@ -92,3 +127,5 @@ export interface LoginRequest {
   email: string;
   password: string;
 }
+
+export { DEV_API_DELAY_MS, IS_DEV_API_DELAY_ENABLED, parseDevDelayMs };

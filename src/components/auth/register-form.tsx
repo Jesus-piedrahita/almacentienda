@@ -1,41 +1,21 @@
 /**
- * @fileoverview Formulario de registro de usuario.
- * Componente de formulario con validación Zod y conexión a API.
+ * @fileoverview Formulario de registro.
+ * Separado del login para respetar la semántica real de autofill/credenciales.
  */
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { registerSchema, type RegisterFormData } from "@/lib/validations/register-schema";
-import { useRegister } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate } from 'react-router';
 
-/**
- * Componente RegisterForm - Formulario de registro de usuario.
- *
- * Renderiza un formulario con validación Zod que incluye:
- * - Campo de email
- * - Campo de contraseña
- * - Campo de confirmación de contraseña
- * - Validación en tiempo real
- * - Validación de coincidencia entre contraseñas
- * - Manejo de estados de carga
- * - Conexión con API de autenticación
- * - Enlace a login para usuarios existentes
- *
- * @param props - Props del componente
- * @param props.className - Clases CSS adicionales para el Card
- *
- * @returns El formulario de registro renderizado dentro de un Card
- */
-export function RegisterForm({ className }: { className?: string }) {
+import { useRegister } from '@/hooks/use-auth';
+import { registerSchema, type RegisterFormData } from '@/lib/validations/register-schema';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+export function RegisterForm() {
   const navigate = useNavigate();
-  
+
   const {
     register,
     handleSubmit,
@@ -45,101 +25,77 @@ export function RegisterForm({ className }: { className?: string }) {
   });
 
   const registerMutation = useRegister();
+  const isPending = isSubmitting || registerMutation.isPending;
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      // Send only email and password to API (not confirmPassword)
       await registerMutation.mutateAsync({
         email: data.email,
         password: data.password,
       });
 
-      // Redirect to login page after successful registration
-      navigate("/login");
+      navigate('/login');
     } catch (error) {
-      // Error is handled by React Query - shows in UI via error state
-      console.error("Register error:", error);
+      console.error('Register error:', error);
     }
   };
 
   return (
-    <Card className={cn("w-full shadow-lg", className)}>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Crear Cuenta</CardTitle>
-        <CardDescription>
-          Ingresa tus datos para registrarte
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="tu@ejemplo.com"
-              autoComplete="email"
-              autoFocus
-              {...register("email")}
-              aria-invalid={!!errors.email}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              autoComplete="new-password"
-              {...register("password")}
-              aria-invalid={!!errors.password}
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              autoComplete="new-password"
-              {...register("confirmPassword")}
-              aria-invalid={!!errors.confirmPassword}
-            />
-            {errors.confirmPassword && (
-              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-            )}
-          </div>
-          
-          {/* Error from API */}
-          {registerMutation.isError && (
-            <p className="text-sm text-destructive">
-              {registerMutation.error?.message || "Error al crear cuenta"}
-            </p>
-          )}
-          
-          <Button type="submit" className="w-full" disabled={isSubmitting || registerMutation.isPending}>
-            {registerMutation.isPending ? "Creando cuenta..." : "Crear Cuenta"}
-          </Button>
-        </form>
-      </CardContent>
-      <CardFooter className="flex flex-col gap-4">
-        <Separator />
-        <p className="text-sm text-center text-muted-foreground">
-          ¿Ya tienes una cuenta?{" "}
-          <Link
-            to="/login"
-            className="text-primary font-medium hover:underline underline-offset-4"
-          >
-            Iniciar Sesión
-          </Link>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="tu@ejemplo.com"
+          autoComplete="username"
+          autoFocus
+          disabled={isPending}
+          {...register('email')}
+          aria-invalid={!!errors.email}
+        />
+        {errors.email ? <p className="text-sm text-destructive">{errors.email.message}</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="password">Contraseña</Label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="••••••••"
+          autoComplete="new-password"
+          disabled={isPending}
+          {...register('password')}
+          aria-invalid={!!errors.password}
+        />
+        {errors.password ? <p className="text-sm text-destructive">{errors.password.message}</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          placeholder="••••••••"
+          autoComplete="new-password"
+          disabled={isPending}
+          {...register('confirmPassword')}
+          aria-invalid={!!errors.confirmPassword}
+        />
+        {errors.confirmPassword ? (
+          <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+        ) : null}
+      </div>
+
+      {registerMutation.isError ? (
+        <p className="text-sm text-destructive">
+          {registerMutation.error?.message || 'Error al crear cuenta'}
         </p>
-      </CardFooter>
-    </Card>
+      ) : null}
+
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {registerMutation.isPending ? 'Creando cuenta...' : 'Crear Cuenta'}
+      </Button>
+    </form>
   );
 }

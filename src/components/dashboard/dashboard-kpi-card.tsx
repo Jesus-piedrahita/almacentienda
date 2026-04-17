@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface DashboardKpiCardProps {
@@ -52,7 +53,7 @@ export function DashboardKpiCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {isLoading ? (
-          <div className="h-7 w-24 animate-pulse rounded bg-muted" />
+          <Skeleton className="h-7 w-24" />
         ) : (
           <div className={cn('text-2xl font-bold tracking-tight text-foreground', tone !== 'default' && toneAccentClasses[tone])}>{value}</div>
         )}

@@ -23,13 +23,11 @@
  */
 
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { AuthLayout } from '@/components/auth/auth-layout';
-import { LoginPage } from '@/pages/login-page';
-import { RegisterPage } from '@/pages/register-page';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -70,6 +68,10 @@ function makeQueryClient() {
  * Renderiza el árbol de rutas auth completo en un container adjunto al body
  * para que jsdom procese correctamente el atributo autoFocus.
  */
+function resolveModeFromPath(path: string): 'login' | 'register' {
+  return path === '/register' ? 'register' : 'login';
+}
+
 function renderAuthApp(initialPath: string, queryClient?: QueryClient) {
   const qc = queryClient ?? makeQueryClient();
   const container = document.createElement('div');
@@ -81,12 +83,7 @@ function renderAuthApp(initialPath: string, queryClient?: QueryClient) {
 
   const utils = render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
-      </Routes>
+      <AuthLayout mode={resolveModeFromPath(initialPath)} />
     </MemoryRouter>,
     { wrapper: Wrapper, container }
   );
@@ -138,7 +135,7 @@ describe('Auth forms — focus management (autoFocus en primer input)', () => {
     renderAuthApp('/login');
 
     const emailInput = screen.getByPlaceholderText('tu@ejemplo.com');
-    const passwordInput = screen.getByPlaceholderText('••••••••');
+    const passwordInput = screen.getByLabelText('Contraseña');
 
     // El campo email puede recibir foco (sería el primero en ser enfocado con autoFocus)
     act(() => { emailInput.focus(); });
@@ -200,8 +197,10 @@ describe('Auth forms — focus management (autoFocus en primer input)', () => {
   it('LoginForm: el primer input focusable es de tipo email (contrato autoFocus)', () => {
     const { container } = renderAuthApp('/login');
 
-    // El email input es el primer input del formulario y debe ser de tipo email
-    const inputs = container.querySelectorAll('input');
+    // El primer input interactivo visible del formulario debe ser email.
+    const inputs = Array.from(container.querySelectorAll('input')).filter(
+      (input) => (input as HTMLInputElement).type !== 'hidden'
+    );
     expect(inputs.length).toBeGreaterThanOrEqual(1);
     const firstInput = inputs[0] as HTMLInputElement;
     expect(firstInput.type).toBe('email');
@@ -210,8 +209,10 @@ describe('Auth forms — focus management (autoFocus en primer input)', () => {
   it('RegisterForm: el primer input focusable es de tipo email (contrato autoFocus)', () => {
     const { container } = renderAuthApp('/register');
 
-    // El email input es el primer input del formulario
-    const inputs = container.querySelectorAll('input');
+    // El primer input interactivo visible del formulario debe ser email.
+    const inputs = Array.from(container.querySelectorAll('input')).filter(
+      (input) => (input as HTMLInputElement).type !== 'hidden'
+    );
     expect(inputs.length).toBeGreaterThanOrEqual(1);
     const firstInput = inputs[0] as HTMLInputElement;
     expect(firstInput.type).toBe('email');
@@ -231,9 +232,9 @@ describe('Auth forms — foco tras navegación login → register', () => {
    * Al navegar de /login a /register (clic en el link "Crear una cuenta"),
    * el formulario de register se monta con un input email que tiene autoFocus.
    *
-   * La navegación real se simula con MemoryRouter + React Router Link,
-   * que es la misma mecánica que usa el LoginForm en producción.
-   */
+     * La transición de modo se simula rerenderizando el mismo shell persistente
+     * con `mode="register"`, que es el nuevo contrato de producción.
+     */
   it('RegisterForm se monta con autoFocus en email tras navegar desde /login', async () => {
     const qc = makeQueryClient();
     const container = document.createElement('div');
@@ -243,14 +244,9 @@ describe('Auth forms — foco tras navegación login → register', () => {
       <QueryClientProvider client={qc}>{children}</QueryClientProvider>
     );
 
-    render(
+    const { rerender } = render(
       <MemoryRouter initialEntries={['/login']}>
-        <Routes>
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
-        </Routes>
+        <AuthLayout mode="login" />
       </MemoryRouter>,
       { wrapper: Wrapper, container }
     );
@@ -261,10 +257,13 @@ describe('Auth forms — foco tras navegación login → register', () => {
     const loginEmailInput = screen.getByPlaceholderText('tu@ejemplo.com');
     expect((loginEmailInput as HTMLInputElement).type).toBe('email');
 
-    // Navegar a /register haciendo clic en el link "Crear una cuenta"
-    const crearCuentaLink = screen.getByRole('link', { name: /crear una cuenta/i });
+    // Cambiar al modo register manteniendo el mismo shell auth persistente
     await act(async () => {
-      fireEvent.click(crearCuentaLink);
+      rerender(
+        <MemoryRouter initialEntries={['/register']}>
+          <AuthLayout mode="register" />
+        </MemoryRouter>
+      );
     });
 
     // Ahora debemos estar en /register — el RegisterForm está montado
@@ -285,14 +284,9 @@ describe('Auth forms — foco tras navegación login → register', () => {
       <QueryClientProvider client={qc}>{children}</QueryClientProvider>
     );
 
-    render(
+    const { rerender } = render(
       <MemoryRouter initialEntries={['/register']}>
-        <Routes>
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
-        </Routes>
+        <AuthLayout mode="register" />
       </MemoryRouter>,
       { wrapper: Wrapper, container }
     );
@@ -301,10 +295,13 @@ describe('Auth forms — foco tras navegación login → register', () => {
     const registerEmailInput = screen.getByPlaceholderText('tu@ejemplo.com');
     expect((registerEmailInput as HTMLInputElement).type).toBe('email');
 
-    // Navegar a /login haciendo clic en "Iniciar Sesión"
-    const loginLink = screen.getByRole('link', { name: /iniciar sesión/i });
+    // Cambiar al modo login manteniendo el mismo shell auth persistente
     await act(async () => {
-      fireEvent.click(loginLink);
+      rerender(
+        <MemoryRouter initialEntries={['/login']}>
+          <AuthLayout mode="login" />
+        </MemoryRouter>
+      );
     });
 
     // Ahora en /login — el LoginForm debe tener autoFocus en email

@@ -1,11 +1,11 @@
 /**
- * @fileoverview Test de regresión para AuthLayout como layout route compartido.
+ * @fileoverview Test de regresión para AuthLayout como shell auth persistente.
  *
  * Verifica:
- * 1. AuthLayout renderiza el contenido del Outlet (rutas hijas).
- * 2. El panel de branding (aside con logo y texto) se mantiene en el DOM
- *    al navegar de /login → /register (sin remount del shell compartido).
- * 3. El wrapper del Outlet tiene la clase `min-h-[480px]` para prevenir CLS.
+ * 1. AuthLayout renderiza el modo correcto (`login` / `register`).
+ * 2. El panel de branding (aside con logo y texto) está presente.
+ * 3. El shell del Card auth vive en AuthLayout y mantiene `min-h-[480px]` para prevenir CLS.
+ * 4. El wrapper auth ya no depende de Outlet ni de fade-in visual.
  *
  * Estrategia de mocking:
  * - MemoryRouter + Routes para simular el entorno de layout route padre/hijo.
@@ -14,60 +14,46 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi, describe, it, expect } from 'vitest';
 import { AuthLayout } from './auth-layout';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+function renderAuthLayout(mode: 'login' | 'register') {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 
-/**
- * Renderiza AuthLayout como ruta layout padre con las rutas hijas especificadas.
- * Refleja fielmente la estructura real de App.tsx.
- */
-function renderAuthLayoutWithRoutes(
-  initialPath: string,
-  routes: Array<{ path: string; element: React.ReactElement }>
-) {
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route element={<AuthLayout />}>
-          {routes.map(({ path, element }) => (
-            <Route key={path} path={path} element={element} />
-          ))}
-        </Route>
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <AuthLayout mode={mode} />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('AuthLayout — layout route compartido', () => {
-  it('renderiza el contenido del Outlet cuando la ruta hija coincide', () => {
-    renderAuthLayoutWithRoutes('/login', [
-      { path: '/login', element: <div data-testid="login-form-stub">Login Form</div> },
-      { path: '/register', element: <div data-testid="register-form-stub">Register Form</div> },
-    ]);
+describe('AuthLayout — shell auth persistente', () => {
+  it('renderiza LoginForm cuando mode=login', () => {
+    renderAuthLayout('login');
 
-    expect(screen.getByTestId('login-form-stub')).toBeInTheDocument();
-    expect(screen.queryByTestId('register-form-stub')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Iniciar Sesión/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
   });
 
-  it('renderiza el contenido del Outlet para /register', () => {
-    renderAuthLayoutWithRoutes('/register', [
-      { path: '/login', element: <div data-testid="login-form-stub">Login Form</div> },
-      { path: '/register', element: <div data-testid="register-form-stub">Register Form</div> },
-    ]);
+  it('renderiza RegisterForm cuando mode=register', () => {
+    renderAuthLayout('register');
 
-    expect(screen.getByTestId('register-form-stub')).toBeInTheDocument();
-    expect(screen.queryByTestId('login-form-stub')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Crear Cuenta/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Confirmar Contraseña/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Crear Cuenta/i })).toBeInTheDocument();
   });
 
   it('mantiene el panel de branding (aside) en el DOM — texto "Almacén Tienda" visible', () => {
-    renderAuthLayoutWithRoutes('/login', [
-      { path: '/login', element: <div>Login</div> },
-    ]);
+    renderAuthLayout('login');
 
     // El aside del panel de branding siempre debe estar presente en el DOM
     // aunque sea visualmente oculto en mobile (hidden md:flex).
@@ -76,26 +62,18 @@ describe('AuthLayout — layout route compartido', () => {
   });
 
   it('mantiene el texto del encabezado del branding', () => {
-    renderAuthLayoutWithRoutes('/login', [
-      { path: '/login', element: <div>Login</div> },
-    ]);
+    renderAuthLayout('login');
 
     expect(
       screen.getByText(/Gestiona tu inventario con facilidad/i)
     ).toBeInTheDocument();
   });
 
-  it('el wrapper del Outlet contiene la clase min-h para prevenir CLS', () => {
-    renderAuthLayoutWithRoutes('/login', [
-      { path: '/login', element: <div data-testid="outlet-child">Form</div> },
-    ]);
+  it('el shell auth contiene la clase min-h para prevenir CLS', () => {
+    renderAuthLayout('login');
 
-    // El wrapper directo del Outlet debe tener min-h-[480px] para prevención CLS
-    // Buscamos el div que contiene al outlet-child y verificamos su clase ancestro
-    const outletChild = screen.getByTestId('outlet-child');
+    const outletChild = screen.getByRole('button', { name: /Iniciar Sesión/i });
 
-    // El Outlet child está dentro de .animate-auth-fade-in → dentro del min-h wrapper
-    // Verificamos que hay un ancestor con la clase min-h-[480px]
     let el: HTMLElement | null = outletChild;
     let foundMinH = false;
     while (el) {
@@ -108,14 +86,27 @@ describe('AuthLayout — layout route compartido', () => {
     expect(foundMinH).toBe(true);
   });
 
-  it('el wrapper del Outlet tiene la clase animate-auth-fade-in', () => {
-    renderAuthLayoutWithRoutes('/login', [
-      { path: '/login', element: <div data-testid="outlet-child">Form</div> },
-    ]);
+  it('renderiza el shell persistente del card auth en login', () => {
+    renderAuthLayout('login');
 
-    const outletChild = screen.getByTestId('outlet-child');
+    expect(screen.getByRole('heading', { name: /Iniciar Sesión/i })).toBeInTheDocument();
+    expect(screen.getByText(/Ingresa tus credenciales para acceder a tu cuenta/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Crear una cuenta/i })).toBeInTheDocument();
+  });
 
-    // El div inmediatamente padre debe tener animate-auth-fade-in
+  it('renderiza el shell persistente del card auth en register', () => {
+    renderAuthLayout('register');
+
+    expect(screen.getByRole('heading', { name: /Crear Cuenta/i })).toBeInTheDocument();
+    expect(screen.getByText(/Ingresa tus datos para registrarte/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
+  });
+
+  it('el shell auth no aplica animate-auth-fade-in para evitar flash visual', () => {
+    renderAuthLayout('login');
+
+    const outletChild = screen.getByRole('button', { name: /Iniciar Sesión/i });
+
     let el: HTMLElement | null = outletChild;
     let foundFadeIn = false;
     while (el) {
@@ -125,48 +116,31 @@ describe('AuthLayout — layout route compartido', () => {
       }
       el = el.parentElement;
     }
-    expect(foundFadeIn).toBe(true);
+    expect(foundFadeIn).toBe(false);
   });
 
-  it('no renderiza contenido de ruta hija si ningún path coincide', () => {
-    renderAuthLayoutWithRoutes('/unknown', [
-      { path: '/login', element: <div data-testid="login-stub">Login</div> },
-      { path: '/register', element: <div data-testid="register-stub">Register</div> },
-    ]);
+  it('mantiene el branding shell presente en ambos modos', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
 
-    // Cuando ninguna ruta hija coincide, React Router no renderiza el layout padre tampoco.
-    // Verificamos que NINGÚN contenido de ruta hija aparece.
-    expect(screen.queryByTestId('login-stub')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('register-stub')).not.toBeInTheDocument();
-    // Y el branding tampoco se renderiza ya que la layout route no matcheó
-    expect(screen.queryByText('Almacén Tienda')).not.toBeInTheDocument();
-  });
-
-  /**
-   * Test crítico de no-remount:
-   * Simula la navegación /login → /register renderizando ambas vistas por separado
-   * y verificando que el nodo del panel de branding no desaparece entre renders.
-   *
-   * Nota: RTL no puede verificar "identidad de nodo DOM" entre renders de componentes
-   * distintos (ese caso requiere Playwright o interacción real). Lo que sí verificamos
-   * es que el branding shell SIEMPRE está presente en AMBAS rutas, que es el contrato
-   * que previene el remount del panel al navegar.
-   */
-  it('el panel de branding está presente tanto en /login como en /register (contrato anti-remount)', () => {
-    // Render en /login
-    const { unmount: unmountLogin } = renderAuthLayoutWithRoutes('/login', [
-      { path: '/login', element: <div>Login Form</div> },
-      { path: '/register', element: <div>Register Form</div> },
-    ]);
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthLayout mode="login" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
 
     expect(screen.getByText('Almacén Tienda')).toBeInTheDocument();
-    unmountLogin();
 
-    // Render en /register — el branding sigue igual
-    renderAuthLayoutWithRoutes('/register', [
-      { path: '/login', element: <div>Login Form</div> },
-      { path: '/register', element: <div>Register Form</div> },
-    ]);
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthLayout mode="register" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
 
     expect(screen.getByText('Almacén Tienda')).toBeInTheDocument();
   });

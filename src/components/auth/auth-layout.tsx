@@ -1,12 +1,20 @@
 /**
  * @fileoverview Layout para páginas de autenticación.
  * Proporciona una estructura dividida en dos columnas: panel de branding (escritorio)
- * y panel de formulario (responsive). Actúa como layout route compartido — renderiza
- * el contenido hijo a través de <Outlet /> para evitar el remount del panel de branding
- * al navegar entre /login y /register.
+ * y panel de formulario (responsive). Actúa como shell persistente del flujo auth
+ * y cambia de modo (`login` | `register`) sin depender de children del router.
  */
 
-import { Outlet } from "react-router"
+import { useNavigate } from 'react-router'
+
+import { LoginForm } from "@/components/auth/login-form"
+import { RegisterForm } from "@/components/auth/register-form"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+
+interface AuthLayoutProps {
+  mode: 'login' | 'register'
+}
 
 /**
  * Componente AuthLayout - Layout route compartido para páginas de autenticación.
@@ -14,12 +22,11 @@ import { Outlet } from "react-router"
  * Proporciona una estructura de dos paneles:
  * - Izquierda: Panel de branding (solo desktop) con gradiente, logo y descripción.
  *   Se mantiene montado al navegar entre rutas auth (sin remount).
- * - Derecha: Panel de formulario (responsive) con Outlet donde React Router
- *   renderiza LoginPage o RegisterPage según la ruta activa.
+ * - Derecha: Panel de formulario (responsive) con shell persistente de Card.
+ *   El modo cambia internamente sin intercambiar children del router.
  *
  * El área del Outlet tiene `min-h-[480px]` para prevenir CLS al cambiar entre
  * el formulario de login (más corto) y el de registro (más alto).
- * La animación `animate-auth-fade-in` aplica un fade-in suave al montar cada formulario.
  *
  * @example
  * ```tsx
@@ -30,7 +37,22 @@ import { Outlet } from "react-router"
  * </Route>
  * ```
  */
-export function AuthLayout() {
+export function AuthLayout({ mode }: AuthLayoutProps) {
+  const isRegisterRoute = mode === "register"
+  const navigate = useNavigate()
+
+  const title = isRegisterRoute ? "Crear Cuenta" : "Iniciar Sesión"
+  const description = isRegisterRoute
+    ? "Ingresa tus datos para registrarte"
+    : "Ingresa tus credenciales para acceder a tu cuenta"
+  const footerPrompt = isRegisterRoute ? "¿Ya tienes una cuenta?" : "¿No tienes una cuenta?"
+  const footerHref = isRegisterRoute ? "/login" : "/register"
+  const footerLabel = isRegisterRoute ? "Iniciar Sesión" : "Crear una cuenta"
+
+  const handleFooterNavigation = () => {
+    navigate(footerHref)
+  }
+
   return (
     <div className="grid md:grid-cols-2 min-h-screen">
       {/* Left: Branding panel - hidden on mobile, visible on desktop */}
@@ -73,9 +95,28 @@ export function AuthLayout() {
       {/* Right: Form panel — stable min-h prevents CLS between login/register */}
       <main className="flex items-center justify-center p-6 bg-background">
         <div className="w-full max-w-md min-h-[480px] flex items-start justify-center">
-          <div className="w-full animate-auth-fade-in">
-            <Outlet />
-          </div>
+          <Card className="w-full shadow-lg">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold">{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isRegisterRoute ? <RegisterForm /> : <LoginForm />}
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+              <Separator />
+              <p className="text-sm text-center text-muted-foreground">
+                {footerPrompt}{" "}
+                <button
+                  type="button"
+                  onClick={handleFooterNavigation}
+                  className="text-primary font-medium hover:underline underline-offset-4"
+                >
+                  {footerLabel}
+                </button>
+              </p>
+            </CardFooter>
+          </Card>
         </div>
       </main>
     </div>

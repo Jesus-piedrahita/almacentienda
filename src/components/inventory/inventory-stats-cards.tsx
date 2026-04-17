@@ -6,6 +6,7 @@
 import { Package, Layers, DollarSign, TrendingUp } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { InventoryStats } from '@/types/inventory';
 import { useCurrency } from '@/hooks/use-currency';
 
@@ -43,11 +44,11 @@ export function InventoryStatsCards({ stats, isLoading }: InventoryStatsCardsPro
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+              <Skeleton className="h-4 w-24" />
             </CardHeader>
             <CardContent>
-              <div className="h-8 w-16 animate-pulse rounded bg-muted" />
-              <div className="mt-2 h-3 w-32 animate-pulse rounded bg-muted" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="mt-2 h-3 w-32" />
             </CardContent>
           </Card>
         ))}

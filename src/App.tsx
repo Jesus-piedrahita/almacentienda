@@ -1,8 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router"
 import { useEffect } from "react"
 
-import { LoginPage } from "./pages/login-page"
-import { RegisterPage } from "./pages/register-page"
+import { AuthPage } from "./pages/auth-page"
 import { DashboardPage } from "./pages/dashboard-page"
 import { InventoryPage } from "./pages/inventory-page"
 import { ClientsPage } from "./pages/clients-page"
@@ -11,6 +10,7 @@ import { SettingsPage } from "./pages/settings-page"
 import { ReportsPage } from "./pages/reports-page"
 import { MainLayout } from "./components/layout/main-layout"
 import { AuthLayout } from "./components/auth/auth-layout"
+import { AuthInitializingShell } from "./components/auth/auth-initializing-shell"
 import { ProtectedRoute } from "./components/auth/protected-route"
 import { ConfirmDialogHost } from "./components/ui/confirm-dialog-host"
 import { useAuthStore } from "./stores/auth-store"
@@ -24,6 +24,11 @@ import { useTheme } from "./hooks/use-theme"
  */
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const isInitialized = useAuthStore((state) => state.isInitialized)
+
+  if (!isInitialized) {
+    return <AuthInitializingShell />
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />
@@ -53,13 +58,11 @@ function App() {
           <Route
             element={
               <AuthRedirect>
-                <AuthLayout />
+                <AuthPage />
               </AuthRedirect>
             }
-          >
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
+            path="/:authMode"
+          />
 
           {/* Rutas protegidas con MainLayout */}
           <Route
