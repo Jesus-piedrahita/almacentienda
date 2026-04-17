@@ -1,27 +1,21 @@
 /**
  * @fileoverview Test de integración para DashboardPage con BarcodeSearchWidget.
- * Verifica que el widget está presente, arranca en idle, y que una búsqueda
- * completa pasa por el hook de inventario y alcanza la capa de HTTP (api.get).
- *
- * Estrategia de mocking:
- * - Para tests de presencia/estado inicial: mock de `useSearchProducts` (rápido).
- * - Para el test de boundary de API: mock de `@/lib/api` (axios) en lugar del hook,
- *   de modo que la cadena real DashboardPage → BarcodeSearchWidget → useSearchProducts
- *   → api.get se ejecuta y podemos verificar la URL del endpoint.
+ * Verifica el nuevo dashboard conectado y preserva la cadena real del widget
+ * de búsqueda de inventario hasta la capa HTTP.
  */
 
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { DashboardPage } from './dashboard-page';
 import * as inventoryHooks from '@/hooks/use-inventory';
+import * as reportsHooks from '@/hooks/use-reports';
+import * as clientHooks from '@/hooks/use-clients';
 import api from '@/lib/api';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
-// vi.hoisted() se ejecuta ANTES del hoisting de vi.mock, permitiendo
-// capturar la implementación real del hook para el test de boundary.
 const realHooks = vi.hoisted(() => ({
   useSearchProducts: undefined as undefined | ((...args: unknown[]) => unknown),
 }));
@@ -32,10 +26,27 @@ vi.mock('@/hooks/use-inventory', async (importOriginal) => {
   return {
     ...original,
     useSearchProducts: vi.fn(),
+    useInventoryStats: vi.fn(),
+    useExpiringProducts: vi.fn(),
   };
 });
 
-// Mock del cliente axios para el test que ejerce la capa real del hook
+vi.mock('@/hooks/use-reports', async (importOriginal) => {
+  const original = await importOriginal<typeof reportsHooks>();
+  return {
+    ...original,
+    useReportsOverview: vi.fn(),
+  };
+});
+
+vi.mock('@/hooks/use-clients', async (importOriginal) => {
+  const original = await importOriginal<typeof clientHooks>();
+  return {
+    ...original,
+    useClientStats: vi.fn(),
+  };
+});
+
 vi.mock('@/lib/api', () => ({
   default: {
     get: vi.fn(),
@@ -48,9 +59,11 @@ vi.mock('@/stores/auth-store', () => ({
 }));
 
 const mockedUseSearchProducts = vi.mocked(inventoryHooks.useSearchProducts);
+const mockedUseInventoryStats = vi.mocked(inventoryHooks.useInventoryStats);
+const mockedUseExpiringProducts = vi.mocked(inventoryHooks.useExpiringProducts);
+const mockedUseReportsOverview = vi.mocked(reportsHooks.useReportsOverview);
+const mockedUseClientStats = vi.mocked(clientHooks.useClientStats);
 const mockedApiGet = vi.mocked(api.get);
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeQueryClient() {
   return new QueryClient({
@@ -61,12 +74,14 @@ function makeQueryClient() {
 function renderDashboard(queryClient?: QueryClient) {
   const qc = queryClient ?? makeQueryClient();
   const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    </MemoryRouter>
   );
   return { ...render(<DashboardPage />, { wrapper: Wrapper }), qc };
 }
 
-const idleState = {
+const idleSearchState = {
   data: undefined,
   isLoading: false,
   isFetching: false,
@@ -74,7 +89,74 @@ const idleState = {
   refetch: vi.fn(),
 } as unknown as ReturnType<typeof inventoryHooks.useSearchProducts>;
 
-// mockProducts con forma ApiProduct (para el test de boundary que usa api.get real)
+const inventoryStatsState = {
+  data: {
+    totalProducts: 42,
+    totalQuantity: 380,
+    totalValue: 15400,
+    stockStatus: {
+      good: 30,
+      warning: 8,
+      critical: 4,
+    },
+    categorySummary: [
+      {
+        categoryId: '1',
+        categoryName: 'Despensa',
+        productCount: 20,
+        totalQuantity: 150,
+        totalValue: 6500,
+      },
+    ],
+  },
+  isLoading: false,
+  isError: false,
+} as unknown as ReturnType<typeof inventoryHooks.useInventoryStats>;
+
+const expiringProductsState = {
+  data: [
+    {
+      id: '10',
+      name: 'Yogur Entero',
+      expiration_date: '2026-05-10',
+      days_remaining: 4,
+      quantity: 8,
+    },
+  ],
+  isLoading: false,
+  isError: false,
+} as unknown as ReturnType<typeof inventoryHooks.useExpiringProducts>;
+
+const reportsOverviewState = {
+  data: {
+    rangeStart: '2026-04-01T00:00:00',
+    rangeEnd: '2026-04-30T23:59:59',
+    summary: {
+      totalSales: 28000,
+      creditSales: 9500,
+      totalCollected: 21000,
+      outstandingBalance: 7000,
+      activeDebtors: 5,
+      closedDebts: 11,
+      averageTicket: 560,
+    },
+  },
+  isLoading: false,
+  isError: false,
+} as unknown as ReturnType<typeof reportsHooks.useReportsOverview>;
+
+const clientStatsState = {
+  data: {
+    totalClients: 18,
+    activeClients: 15,
+    totalDebt: 7300,
+    clientsWithDebt: 6,
+    topClients: [],
+  },
+  isLoading: false,
+  isError: false,
+} as unknown as ReturnType<typeof clientHooks.useClientStats>;
+
 const mockApiProducts = [
   {
     id: 1,
@@ -93,12 +175,14 @@ const mockApiProducts = [
   },
 ];
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
 describe('DashboardPage integration', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockedUseSearchProducts.mockReturnValue(idleState);
+    mockedUseSearchProducts.mockReturnValue(idleSearchState);
+    mockedUseInventoryStats.mockReturnValue(inventoryStatsState);
+    mockedUseExpiringProducts.mockReturnValue(expiringProductsState);
+    mockedUseReportsOverview.mockReturnValue(reportsOverviewState);
+    mockedUseClientStats.mockReturnValue(clientStatsState);
     mockedApiGet.mockResolvedValue({ data: [] });
   });
 
@@ -107,13 +191,84 @@ describe('DashboardPage integration', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the DashboardPage with the BarcodeSearchWidget present', () => {
+  it('renders the connected dashboard with the BarcodeSearchWidget present', () => {
     renderDashboard();
 
     expect(screen.getByTestId('barcode-search-widget')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /dashboard/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByText(/Resumen del negocio/i)).toBeInTheDocument();
+    expect(screen.getByText(/Alertas operativas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Herramientas y próximas acciones/i)).toBeInTheDocument();
+  });
+
+  it('renders connected KPI values instead of static placeholders', () => {
+    renderDashboard();
+
+    expect(screen.getByRole('heading', { name: /Ventas \(30 días\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Ticket promedio/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Total productos/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Saldo pendiente$/i })).toBeInTheDocument();
+    expect(screen.getByText(/42/)).toBeInTheDocument();
+    expect(screen.getByText(/380/)).toBeInTheDocument();
+  });
+
+  it('removes unsupported legacy dashboard cards', () => {
+    renderDashboard();
+
+    expect(screen.queryByText(/Pedidos Pendientes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Usuarios Activos/i)).not.toBeInTheDocument();
+  });
+
+  it('renders expiring products and quick action links', () => {
+    renderDashboard();
+
+    expect(screen.getByText(/Productos con Fecha de Vencimiento/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Ir a Ventas/i })).toHaveAttribute('href', '/sales');
+    expect(screen.getByRole('link', { name: /Ir a Inventario/i })).toHaveAttribute('href', '/inventory');
+    expect(screen.getByRole('link', { name: /Ir a Clientes/i })).toHaveAttribute('href', '/clients');
+    expect(screen.getByRole('link', { name: /Ir a Reportes/i })).toHaveAttribute('href', '/reports');
+  });
+
+  it('renders loading placeholders instead of fake KPI zero values while queries load', () => {
+    mockedUseInventoryStats.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    } as unknown as ReturnType<typeof inventoryHooks.useInventoryStats>);
+    mockedUseReportsOverview.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    } as unknown as ReturnType<typeof reportsHooks.useReportsOverview>);
+    mockedUseClientStats.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    } as unknown as ReturnType<typeof clientHooks.useClientStats>);
+
+    const { container } = renderDashboard();
+
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^\$0(?:[.,]00)?$/)).not.toBeInTheDocument();
+  });
+
+  it('wires the KPI section to its visible heading with aria-labelledby', () => {
+    renderDashboard();
+
+    const section = screen.getByRole('heading', { name: /Resumen del negocio/i }).closest('section');
+
+    expect(section).toHaveAttribute('aria-labelledby', 'kpis-heading');
+    expect(screen.getByRole('heading', { name: /Resumen del negocio/i })).toHaveAttribute('id', 'kpis-heading');
+  });
+
+  it('renders quick actions with multiline-safe classes', () => {
+    renderDashboard();
+
+    const reportsAction = screen.getByRole('link', { name: /Ir a Reportes/i });
+
+    expect(reportsAction.className).toContain('min-w-0');
+    expect(reportsAction.className).toContain('whitespace-normal');
+    expect(screen.getByText(/Profundizar en métricas y análisis del negocio/i).className).toContain('break-words');
   });
 
   it('widget starts in idle-ready state: input available and idle hint shown', () => {
@@ -162,26 +317,20 @@ describe('DashboardPage integration', () => {
     expect(input.value).toBe('999888777666');
   });
 
-  it('does NOT render the old "Información del Sistema" static card', () => {
+  it('renders a local degraded state when expiring products are unavailable', () => {
+    mockedUseExpiringProducts.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    } as unknown as ReturnType<typeof inventoryHooks.useExpiringProducts>);
+
     renderDashboard();
 
-    expect(
-      screen.queryByText(/Información del Sistema/i)
-    ).not.toBeInTheDocument();
+    expect(screen.getByText(/No pudimos revisar vencimientos/i)).toBeInTheDocument();
+    expect(screen.getByTestId('barcode-search-widget')).toBeInTheDocument();
   });
 
-  /**
-   * Test de boundary de integración real:
-   * Verifica que la cadena DashboardPage → BarcodeSearchWidget → useSearchProducts (real hook)
-   * → api.get alcanza el endpoint correcto `/api/inventory/products/search`.
-   *
-   * A diferencia del test anterior que mockeaba useSearchProducts (solo probaba invocación
-   * del hook), este test restaura el hook real y mockea api.get (axios) directamente.
-   * Así se verifica que el path completo hasta la capa HTTP está correctamente cableado.
-   */
   it('search flow reaches inventory search endpoint /api/inventory/products/search via real hook chain', async () => {
-    // Usar la implementación real del hook para ejercer la cadena completa
-    // (no mockRestore() que no funciona con vi.mock — usamos mockImplementation con el original)
     mockedUseSearchProducts.mockImplementation(
       realHooks.useSearchProducts as typeof inventoryHooks.useSearchProducts
     );
@@ -195,26 +344,21 @@ describe('DashboardPage integration', () => {
 
     const input = screen.getByTestId('barcode-search-input') as HTMLInputElement;
 
-    // Tipeo de un query de 4+ chars via fireEvent (compatible con fake timers)
     act(() => {
       fireEvent.change(input, { target: { value: 'coca' } });
     });
 
-    // Dejar expirar el debounce de 300ms para que submittedQuery se actualice
     act(() => {
       vi.advanceTimersByTime(300);
     });
 
-    // Avanzar todos los timers/microtasks restantes para que React Query dispare la query
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
-    // Verificar que api.get fue llamado con la URL del endpoint de búsqueda de inventario
-    expect(mockedApiGet).toHaveBeenCalledWith(
-      '/api/inventory/products/search',
-      { params: { q: 'coca' } }
-    );
+    expect(mockedApiGet).toHaveBeenCalledWith('/api/inventory/products/search', {
+      params: { q: 'coca' },
+    });
 
     qc.clear();
   });
