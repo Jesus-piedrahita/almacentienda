@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Package, Plus, TrendingUp, AlertTriangle, Tag } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,8 +19,9 @@ import { AddProductDialog } from '@/components/inventory/add-product-dialog';
 import { CategoryDialog } from '@/components/inventory/category-dialog';
 import { EditProductDialog } from '@/components/inventory/edit-product-dialog';
 import { ExpiringProductsCard } from '@/components/inventory/expiring-products-card';
+import { LowStockProductsCard } from '@/components/inventory/low-stock-products-card';
 import { BulkMarkupDialog } from '@/components/inventory/bulk-markup-dialog';
-import { useProducts, useCategories, useInventoryStats, useDeleteProduct, useDeleteCategory, useExpiringProducts } from '@/hooks/use-inventory';
+import { useProducts, useCategories, useInventoryStats, useDeleteProduct, useDeleteCategory, useExpiringProducts, useLowStockProducts } from '@/hooks/use-inventory';
 import { confirmDelete, showError } from '@/hooks/use-confirm-dialog';
 import type { Product, Category } from '@/types/inventory';
 
@@ -48,6 +50,10 @@ export function InventoryPage() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Leer query param para sección activa (e.g. ?tab=low-stock desde dashboard)
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab');
+
   // Queries con React Query
   const { data: productsData, isLoading: isLoadingProducts } = useProducts(1);
   const { data: categories, isLoading: isLoadingCategories } = useCategories();
@@ -58,6 +64,7 @@ export function InventoryPage() {
     refetch: refetchStats,
   } = useInventoryStats();
   const { data: expiringProducts = [] } = useExpiringProducts();
+  const { data: lowStockProducts = [], isLoading: isLoadingLowStock } = useLowStockProducts();
   
   // Mutations
   const deleteProductMutation = useDeleteProduct();
@@ -152,6 +159,13 @@ export function InventoryPage() {
 
       {/* Resumen simple de vencimientos (oculto si no hay productos con fecha) */}
       <ExpiringProductsCard products={expiringProducts} />
+
+      {/* Sección detallada de stock bajo mínimo — visible siempre en inventario o por deep-link */}
+      {(activeTab === 'low-stock' || !isLoadingLowStock) && (
+        <section id="low-stock" aria-labelledby="low-stock-heading">
+          <LowStockProductsCard />
+        </section>
+      )}
 
       {/* Estado del stock y gráfico por categoría */}
       <div className="grid gap-6 lg:grid-cols-2">

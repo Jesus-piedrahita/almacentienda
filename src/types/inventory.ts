@@ -137,14 +137,30 @@ export interface BulkMarkupResult {
 }
 
 /**
- * Función helper para determinar el estado del stock
+ * Producto con stock por debajo del mínimo tal como lo devuelve
+ * el endpoint GET /api/inventory/alerts/low-stock.
+ */
+export interface LowStockProduct {
+  id: string;
+  name: string;
+  /** Cantidad actual en inventario. */
+  quantity: number;
+  /** Stock mínimo configurado para el producto. */
+  min_stock: number;
+}
+
+/**
+ * Función helper para determinar el estado del stock basado en el min_stock
+ * por producto en lugar de umbrales globales fijos.
+ *
  * @param quantity - Cantidad actual del producto
+ * @param minStock - Stock mínimo configurado para este producto
  * @returns Estado del stock
  */
-export function getStockStatus(quantity: number): StockStatus {
-  if (quantity > 8) return 'good';
-  if (quantity > 4) return 'warning';
-  return 'critical';
+export function getStockStatus(quantity: number, minStock: number = 4): StockStatus {
+  if (quantity <= minStock) return 'critical';
+  if (quantity <= minStock * 2) return 'warning';
+  return 'good';
 }
 
 /**

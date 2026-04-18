@@ -28,6 +28,7 @@ vi.mock('@/hooks/use-inventory', async (importOriginal) => {
     useSearchProducts: vi.fn(),
     useInventoryStats: vi.fn(),
     useExpiringProducts: vi.fn(),
+    useLowStockProducts: vi.fn(),
   };
 });
 
@@ -61,6 +62,7 @@ vi.mock('@/stores/auth-store', () => ({
 const mockedUseSearchProducts = vi.mocked(inventoryHooks.useSearchProducts);
 const mockedUseInventoryStats = vi.mocked(inventoryHooks.useInventoryStats);
 const mockedUseExpiringProducts = vi.mocked(inventoryHooks.useExpiringProducts);
+const mockedUseLowStockProducts = vi.mocked(inventoryHooks.useLowStockProducts);
 const mockedUseReportsOverview = vi.mocked(reportsHooks.useReportsOverview);
 const mockedUseClientStats = vi.mocked(clientHooks.useClientStats);
 const mockedApiGet = vi.mocked(api.get);
@@ -183,6 +185,12 @@ describe('DashboardPage integration', () => {
     mockedUseExpiringProducts.mockReturnValue(expiringProductsState);
     mockedUseReportsOverview.mockReturnValue(reportsOverviewState);
     mockedUseClientStats.mockReturnValue(clientStatsState);
+    mockedUseLowStockProducts.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof inventoryHooks.useLowStockProducts>);
     mockedApiGet.mockResolvedValue({ data: [] });
   });
 
@@ -361,5 +369,102 @@ describe('DashboardPage integration', () => {
     });
 
     qc.clear();
+  });
+});
+
+// ── Low-stock widget spec scenarios ──────────────────────────────────────────
+
+describe('DashboardPage — low-stock widget spec scenarios', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockedUseSearchProducts.mockReturnValue(idleSearchState);
+    mockedUseInventoryStats.mockReturnValue(inventoryStatsState);
+    mockedUseExpiringProducts.mockReturnValue(expiringProductsState);
+    mockedUseReportsOverview.mockReturnValue(reportsOverviewState);
+    mockedUseClientStats.mockReturnValue(clientStatsState);
+    mockedApiGet.mockResolvedValue({ data: [] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('SCENARIO-1: muestra el widget de stock bajo con conteo cuando hay productos bajo mínimo', () => {
+    mockedUseLowStockProducts.mockReturnValue({
+      data: [
+        { id: '1', name: 'Arroz', quantity: 2, min_stock: 10 },
+        { id: '2', name: 'Aceite', quantity: 1, min_stock: 5 },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof inventoryHooks.useLowStockProducts>);
+
+    renderDashboard();
+
+    // El widget debe renderizarse con los productos bajo mínimo
+    expect(screen.getByText('Arroz')).toBeInTheDocument();
+    expect(screen.getByText('Aceite')).toBeInTheDocument();
+    // Badge de conteo
+    expect(screen.getByText('2')).toBeInTheDocument();
+  });
+
+  it('SCENARIO-1: el CTA del widget apunta a /inventory?tab=low-stock', () => {
+    mockedUseLowStockProducts.mockReturnValue({
+      data: [{ id: '1', name: 'Sal', quantity: 1, min_stock: 5 }],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof inventoryHooks.useLowStockProducts>);
+
+    renderDashboard();
+
+    expect(screen.getByRole('button', { name: /Ver todos los detalles/i })).toBeInTheDocument();
+  });
+
+  it('SCENARIO-2: muestra el widget con estado vacío cuando no hay productos bajo mínimo', () => {
+    mockedUseLowStockProducts.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof inventoryHooks.useLowStockProducts>);
+
+    renderDashboard();
+
+    // La tarjeta se monta y muestra estado vacío positivo
+    expect(screen.getByText(/Stock bajo mínimo/i)).toBeInTheDocument();
+    expect(screen.getByText(/Todos los productos tienen stock por encima del mínimo/i)).toBeInTheDocument();
+  });
+
+  it('muestra el widget con skeleton de carga mientras low-stock está cargando', () => {
+    mockedUseLowStockProducts.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof inventoryHooks.useLowStockProducts>);
+
+    const { container } = renderDashboard();
+
+    // La tarjeta está montada con skeleton animate-pulse — el list poblado no existe todavía
+    expect(screen.queryByRole('list', { name: /stock por debajo del mínimo/i })).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+  });
+
+  it('muestra el estado de error del widget cuando low-stock falla (no degradación silenciosa)', () => {
+    mockedUseLowStockProducts.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof inventoryHooks.useLowStockProducts>);
+
+    renderDashboard();
+
+    // La tarjeta se monta y expone su propio estado de error con opción de reintentar
+    expect(screen.getByText(/No pudimos cargar los productos con stock bajo/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Reintentar/i })).toBeInTheDocument();
   });
 });

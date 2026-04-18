@@ -134,6 +134,29 @@ describe('ProductResultCard', () => {
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
+  // ── minStock-driven stock status ─────────────────────────────────────────
+
+  it('usa product.minStock para derivar el estado: qty=15 minStock=10 → Alerta', () => {
+    const warningProduct: Product = { ...mockProduct, quantity: 15, minStock: 10 };
+    render(<ProductResultCard product={warningProduct} onAdd={onAdd} />);
+    expect(screen.getByText(/Alerta/i)).toBeInTheDocument();
+  });
+
+  it('usa product.minStock para derivar el estado: qty=15 minStock=5 → Bien (no cae en default 4)', () => {
+    // Con minStock=5 los umbrales son: crítico≤5, alerta≤10, bien>10
+    // qty=15 > 10 → Bien
+    const goodProduct: Product = { ...mockProduct, quantity: 15, minStock: 5 };
+    render(<ProductResultCard product={goodProduct} onAdd={onAdd} />);
+    expect(screen.getByText(/Bien/i)).toBeInTheDocument();
+  });
+
+  it('usa product.minStock para derivar el estado: qty=5 minStock=10 → Crítico (no el default 4)', () => {
+    // Con default minStock=4: qty=5 sería "warning", pero con minStock=10 es "critical"
+    const criticalByMinStock: Product = { ...mockProduct, quantity: 5, minStock: 10 };
+    render(<ProductResultCard product={criticalByMinStock} onAdd={onAdd} />);
+    expect(screen.getByText(/Crítico/i)).toBeInTheDocument();
+  });
+
   it('pasa el producto correcto a onAdd para productos distintos', async () => {
     const user = userEvent.setup();
     render(<ProductResultCard product={lowStockProduct} onAdd={onAdd} />);

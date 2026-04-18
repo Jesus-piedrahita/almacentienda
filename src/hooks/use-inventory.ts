@@ -13,6 +13,7 @@ import type {
   CreateProductInput,
   CreateCategoryInput,
   ExpiringProduct,
+  LowStockProduct,
   BulkMarkupInput,
   BulkMarkupResult,
 } from '@/types/inventory';
@@ -60,6 +61,17 @@ interface ApiExpiringProduct {
   /** Días restantes hasta el vencimiento (negativo si ya venció). */
   days_remaining: number;
   quantity: number;
+}
+
+/**
+ * Representación de un producto bajo stock tal como lo devuelve
+ * el endpoint GET /api/inventory/alerts/low-stock.
+ */
+interface ApiLowStockProduct {
+  id: number;
+  name: string;
+  quantity: number;
+  min_stock: number;
 }
 
 interface ApiPagination {
@@ -142,6 +154,15 @@ function mapApiExpiringProductToExpiringProduct(api: ApiExpiringProduct): Expiri
   };
 }
 
+function mapApiLowStockProductToLowStockProduct(api: ApiLowStockProduct): LowStockProduct {
+  return {
+    id: String(api.id),
+    name: api.name,
+    quantity: api.quantity,
+    min_stock: api.min_stock,
+  };
+}
+
 function mapApiStatsToInventoryStats(apiStats: ApiStats): InventoryStats {
   return {
     totalProducts: apiStats.total_products,
@@ -180,6 +201,7 @@ export const queryKeys = {
   categories: ['categories'] as const,
   stats: ['inventory-stats'] as const,
   expiring: ['inventory-expiring'] as const,
+  lowStock: ['inventory-low-stock'] as const,
 };
 
 // ============================================================
@@ -260,6 +282,35 @@ export function useExpiringProducts() {
     },
     retry: false,          // do not retry 404/501
     staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+}
+
+/**
+ * Hook para obtener productos con stock por debajo del mínimo.
+ *
+ * Llama a GET /api/inventory/alerts/low-stock y devuelve la lista de productos.
+ * Si el backend responde con 404 o 501 (endpoint aún no implementado), retorna
+ * un array vacío silenciosamente para no bloquear el renderizado.
+ *
+ * @returns LowStockProduct[] — vacío si el backend no está disponible aún.
+ */
+export function useLowStockProducts() {
+  return useQuery({
+    queryKey: queryKeys.lowStock,
+    queryFn: async (): Promise<LowStockProduct[]> => {
+      try {
+        const response = await api.get<ApiLowStockProduct[]>('/api/inventory/alerts/low-stock');
+        return response.data.map(mapApiLowStockProductToLowStockProduct);
+      } catch (err: unknown) {
+        // Backend not yet implemented — fail silently on 404/501
+        if (isAxiosError(err) && (err.response?.status === 404 || err.response?.status === 501)) {
+          return [];
+        }
+        throw err; // re-throw unexpected errors
+      }
+    },
+    retry: false,             // do not retry 404/501
+    staleTime: 1000 * 60 * 2, // 2 minutos
   });
 }
 

@@ -1,6 +1,7 @@
 /**
  * @fileoverview Componente indicador visual del estado del stock.
  * Muestra visualmente los productos en estado: Bien (azul), Alerta (amarillo), Crítico (rojo).
+ * Los umbrales reflejan el min_stock por producto: crítico ≤ min_stock, alerta ≤ min_stock×2.
  * Soporta estado de carga (skeleton), estado de error con retry y el estado vacío real.
  */
 
@@ -11,11 +12,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface StockStatusIndicatorProps {
-  /** Productos con stock > 8 (Bien) */
+  /** Productos con stock > min_stock×2 (Bien) */
   good: number;
-  /** Productos con stock > 4 && <= 8 (Alerta) */
+  /** Productos con stock > min_stock && ≤ min_stock×2 (Alerta) */
   warning: number;
-  /** Productos con stock <= 4 (Crítico) */
+  /** Productos con stock ≤ min_stock (Crítico) */
   critical: number;
   /** Indica si los datos están siendo cargados por primera vez */
   isLoading: boolean;
@@ -42,9 +43,9 @@ function getPercentages(good: number, warning: number, critical: number) {
  * StockStatusIndicator - Indicador visual del estado del stock.
  *
  * Muestra una barra visual con colores:
- * - Azul: Bien (> 8 unidades)
- * - Amarillo: Alerta (> 4 y <= 8 unidades)
- * - Rojo: Crítico (<= 4 unidades)
+ * - Azul: Bien (stock > min_stock×2)
+ * - Amarillo: Alerta (stock > min_stock y ≤ min_stock×2)
+ * - Rojo: Crítico (stock ≤ min_stock)
  *
  * También muestra las tarjetas individuales con conteos.
  * Durante la carga inicial muestra un skeleton placeholder.
@@ -159,7 +160,7 @@ export function StockStatusIndicator({
                 <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
                   Bien
                 </p>
-                <p className="text-xs text-blue-600/70">{' > 8'}</p>
+                <p className="text-xs text-blue-600/70">{'> min×2'}</p>
               </div>
             </div>
             <span className="text-lg font-bold text-blue-700 dark:text-blue-400">
@@ -180,7 +181,7 @@ export function StockStatusIndicator({
                 <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
                   Alerta
                 </p>
-                <p className="text-xs text-yellow-600/70">{' > 4'}</p>
+                <p className="text-xs text-yellow-600/70">{'> min'}</p>
               </div>
             </div>
             <span className="text-lg font-bold text-yellow-700 dark:text-yellow-400">
@@ -201,7 +202,7 @@ export function StockStatusIndicator({
                 <p className="text-sm font-medium text-red-700 dark:text-red-400">
                   Crítico
                 </p>
-                <p className="text-xs text-red-600/70">{' ≤ 4'}</p>
+                <p className="text-xs text-red-600/70">{'≤ min'}</p>
               </div>
             </div>
             <span className="text-lg font-bold text-red-700 dark:text-red-400">

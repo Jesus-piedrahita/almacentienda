@@ -11,6 +11,7 @@ import { DashboardKpiCard } from '@/components/dashboard/dashboard-kpi-card';
 import { DashboardQuickActions } from '@/components/dashboard/dashboard-quick-actions';
 import { DashboardSectionHeader } from '@/components/dashboard/dashboard-section-header';
 import { ExpiringProductsCard } from '@/components/inventory/expiring-products-card';
+import { LowStockProductsCard } from '@/components/inventory/low-stock-products-card';
 import { ReportsVisualState } from '@/components/reports/reports-visual-state';
 import { Button } from '@/components/ui/button';
 import { useClientStats } from '@/hooks/use-clients';
@@ -197,6 +198,9 @@ export function DashboardPage() {
               variant="empty"
             />
           )}
+
+          {/* Widget de stock bajo mínimo — la tarjeta maneja todos los estados: loading, error, vacío y poblado */}
+          <LowStockProductsCard />
         </div>
 
         <div className="space-y-4">

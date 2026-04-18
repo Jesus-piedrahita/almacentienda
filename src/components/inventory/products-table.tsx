@@ -284,7 +284,7 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete, selectedI
               </TableHeader>
               <TableBody>
                 {paginatedProducts.map((product) => {
-                  const status = getStockStatus(product.quantity);
+                  const status = getStockStatus(product.quantity, product.minStock);
                   const statusColor = getStockStatusColor(status);
                   const expirationStatus = getExpirationDisplayStatus(product.expiration_date);
                   const expirationStatusColor = getExpirationDisplayStatusColor(expirationStatus);

@@ -44,7 +44,7 @@ export interface ProductResultCardProps {
  * El card completo también es clickable para una UX de POS más ágil.
  */
 export function ProductResultCard({ product, onAdd }: ProductResultCardProps) {
-  const stockStatus = getStockStatus(product.quantity);
+  const stockStatus = getStockStatus(product.quantity, product.minStock);
   const stockColor = getStockStatusColor(stockStatus);
   const { formatAmount } = useCurrency();
 
