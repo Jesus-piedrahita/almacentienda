@@ -128,4 +128,15 @@ export interface LoginRequest {
   password: string;
 }
 
+export async function uploadTransferProof(proofId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return api.post(`/api/transfers/${proofId}/proof`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+}
+
 export { DEV_API_DELAY_MS, IS_DEV_API_DELAY_ENABLED, parseDevDelayMs };

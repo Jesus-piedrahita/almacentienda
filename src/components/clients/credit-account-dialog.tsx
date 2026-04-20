@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrency } from '@/hooks/use-currency';
 import type { ClientCreditAccount, CreditSaleGroup } from '@/types/clients';
 import { RegisterPaymentModal } from './register-payment-modal';
+import { TransferStatusBadge } from '@/components/transfers/transfer-status-badge';
 
 interface CreditAccountDialogProps {
   open: boolean;
@@ -163,9 +164,30 @@ export function CreditAccountDialog({
                             {sale.payments.map((payment) => (
                               <div key={payment.id} className="rounded-md bg-muted/50 p-3 text-sm">
                                 <div className="flex items-center justify-between gap-3">
-                                  <span>{formatDateTime(payment.createdAt)}</span>
-                                   <span className="font-semibold text-primary">{formatAmount(payment.amount)}</span>
+                                  <div className="flex flex-col gap-1">
+                                    <span>{formatDateTime(payment.createdAt)}</span>
+                                    {payment.paymentMethod === 'transfer' && payment.transferStatus && (
+                                      <TransferStatusBadge status={payment.transferStatus} />
+                                    )}
+                                  </div>
+                                  <span className="font-semibold text-primary">{formatAmount(payment.amount)}</span>
                                 </div>
+                                <p className="mt-1 text-muted-foreground">
+                                  Método: {payment.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo'}
+                                </p>
+                                {payment.referenceNote && (
+                                  <p className="mt-1 text-muted-foreground">Referencia: {payment.referenceNote}</p>
+                                )}
+                                {payment.transferProofUrl && (
+                                  <a
+                                    href={payment.transferProofUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-1 inline-flex text-primary underline underline-offset-2"
+                                  >
+                                    Ver comprobante
+                                  </a>
+                                )}
                                 {payment.note && (
                                   <p className="mt-1 text-muted-foreground">{payment.note}</p>
                                 )}

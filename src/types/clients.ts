@@ -115,6 +115,11 @@ export interface DebtPayment {
   clientId: string;
   saleId: string | null;
   amount: number;
+  paymentMethod: 'cash' | 'transfer';
+  transferProofId: string | null;
+  transferStatus: 'pending' | 'confirmed' | 'rejected' | null;
+  transferProofUrl: string | null;
+  referenceNote?: string | null;
   note?: string;
   createdAt: string;
 }
@@ -152,5 +157,8 @@ export interface ClientCreditAccount {
 export interface RegisterPaymentInput {
   saleId: string | null;
   amount: number;
+  paymentMethod?: 'cash' | 'transfer';
+  referenceNote?: string;
+  transferFile?: File | null;
   note?: string;
 }

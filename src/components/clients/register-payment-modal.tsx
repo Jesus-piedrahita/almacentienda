@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCurrency } from '@/hooks/use-currency';
 import { useRegisterPayment } from '@/hooks/use-clients';
+import { TransferFields } from '@/components/sales/transfer-fields';
 
 interface RegisterPaymentModalProps {
   open: boolean;
@@ -36,6 +37,9 @@ export function RegisterPaymentModal({
   const { formatAmount } = useCurrency();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
+  const [transferFile, setTransferFile] = useState<File | null>(null);
+  const [referenceNote, setReferenceNote] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const numericAmount = Number(amount);
@@ -49,14 +53,20 @@ export function RegisterPaymentModal({
 
     try {
       setError(null);
-      await registerPayment.mutateAsync({
-        saleId,
-        amount: numericAmount,
-        note: note.trim() || undefined,
-      });
-      setAmount('');
-      setNote('');
-      onOpenChange(false);
+        await registerPayment.mutateAsync({
+          saleId,
+          amount: numericAmount,
+          paymentMethod,
+          transferFile,
+          referenceNote: paymentMethod === 'transfer' ? referenceNote.trim() || undefined : undefined,
+          note: note.trim() || undefined,
+        });
+        setAmount('');
+        setNote('');
+        setPaymentMethod('cash');
+        setTransferFile(null);
+        setReferenceNote('');
+        onOpenChange(false);
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { detail?: string } } };
       setError(apiError?.response?.data?.detail ?? 'No se pudo registrar el abono.');
@@ -67,6 +77,9 @@ export function RegisterPaymentModal({
     if (!nextOpen) {
       setAmount('');
       setNote('');
+      setPaymentMethod('cash');
+      setTransferFile(null);
+      setReferenceNote('');
       setError(null);
     }
     onOpenChange(nextOpen);
@@ -86,6 +99,18 @@ export function RegisterPaymentModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Método de pago</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" variant={paymentMethod === 'cash' ? 'default' : 'outline'} onClick={() => setPaymentMethod('cash')}>
+                Efectivo
+              </Button>
+              <Button type="button" variant={paymentMethod === 'transfer' ? 'default' : 'outline'} onClick={() => setPaymentMethod('transfer')}>
+                Transferencia
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="payment-amount">Monto del abono</Label>
             <Input
@@ -112,6 +137,17 @@ export function RegisterPaymentModal({
               placeholder="Ej: Efectivo, transferencia, referencia..."
             />
           </div>
+
+          {paymentMethod === 'transfer' && (
+            <TransferFields
+              file={transferFile}
+              referenceNote={referenceNote}
+              onFileChange={setTransferFile}
+              onReferenceNoteChange={setReferenceNote}
+              fileInputId="register-payment-transfer-file"
+              referenceInputId="register-payment-transfer-reference"
+            />
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>

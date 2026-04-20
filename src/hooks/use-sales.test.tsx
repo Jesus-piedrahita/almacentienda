@@ -38,6 +38,19 @@ vi.mock('@/lib/api', () => ({
     get: vi.fn(),
     post: vi.fn(),
   },
+  uploadTransferProof: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-transfers', () => ({
+  useUploadTransferProof: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      proof_id: 14,
+      proof_url: 'https://example.com/proof.png',
+      proof_filename: 'proof.png',
+      proof_size_bytes: 1234,
+      uploaded_at: '2026-04-09T12:05:00Z',
+    }),
+  }),
 }));
 
 const mockedApiGet = vi.mocked(api.get);
@@ -83,6 +96,10 @@ const mockApiSale = {
   client_name: null,
   state: 'completed' as const,
   payment_method: 'cash' as const,
+  transfer_proof_id: null,
+  transfer_status: null,
+  transfer_proof_url: null,
+  reference_note: null,
   subtotal: 37.0,
   total: 42.92,
   created_at: '2026-04-09T12:00:00Z',
@@ -175,6 +192,23 @@ describe('mapApiSaleToSale', () => {
     expect(sale.paymentMethod).toBe('credit');
   });
 
+  it('mapea campos de transferencia correctamente', () => {
+    const sale = mapApiSaleToSale({
+      ...mockApiSale,
+      payment_method: 'transfer' as const,
+      transfer_proof_id: 12,
+      transfer_status: 'pending' as const,
+      transfer_proof_url: 'https://example.com/proof.png',
+      reference_note: 'REF-1',
+    });
+
+    expect(sale.paymentMethod).toBe('transfer');
+    expect(sale.transferProofId).toBe('12');
+    expect(sale.transferStatus).toBe('pending');
+    expect(sale.transferProofUrl).toBe('https://example.com/proof.png');
+    expect(sale.referenceNote).toBe('REF-1');
+  });
+
   it('mapea campos de cancelación cuando están presentes', () => {
     const cancelledSale = {
       ...mockApiSale,
@@ -252,6 +286,44 @@ describe('useCreateSale', () => {
     expect(mockedApiPost).toHaveBeenCalledWith('/api/sales', {
       payment_method: 'credit',
       client_id: 5,
+      items: [{ product_id: 99, quantity: 2 }],
+    });
+  });
+
+  it('envía reference_note cuando la venta es transferencia', async () => {
+    mockedApiPost.mockResolvedValueOnce({
+      data: {
+        ...mockApiSale,
+        payment_method: 'transfer',
+        transfer_proof_id: 14,
+        transfer_status: 'pending',
+      },
+    });
+    mockedApiGet.mockResolvedValueOnce({
+      data: {
+        ...mockApiSale,
+        payment_method: 'transfer',
+        transfer_proof_id: 14,
+        transfer_status: 'pending',
+        reference_note: 'REF-2',
+      },
+    });
+
+    const file = new File(['proof'], 'proof.png', { type: 'image/png' });
+    const { result } = renderHook(() => useCreateSale(), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      paymentMethod: 'transfer',
+      referenceNote: 'REF-2',
+      transferFile: file,
+      items: [{ productId: '99', quantity: 2 }],
+    });
+
+    expect(mockedApiPost).toHaveBeenCalledWith('/api/sales', {
+      payment_method: 'transfer',
+      reference_note: 'REF-2',
       items: [{ product_id: 99, quantity: 2 }],
     });
   });

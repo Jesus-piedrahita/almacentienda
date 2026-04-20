@@ -345,7 +345,7 @@ describe('SalesPage integration', () => {
     expect(totalLabels.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('card payment shows "no disponible" warning and disables Confirm button', async () => {
+  it('transfer payment shows pending validation warning and transfer fields', async () => {
     useSalesStore.getState().addItem(mockProducts[0]);
 
     renderSalesPage();
@@ -355,20 +355,22 @@ describe('SalesPage integration', () => {
       fireEvent.click(cobrarBtn);
     });
 
-    // Cambiar a modo tarjeta
-    const cardBtn = screen.getByRole('button', { name: /tarjeta/i });
+    // Cambiar a modo transferencia
+    const transferBtn = screen.getByRole('button', { name: /transfer/i });
     await act(async () => {
-      fireEvent.click(cardBtn);
+      fireEvent.click(transferBtn);
     });
 
-    // Debe mostrar advertencia de tarjeta no disponible
+    // Debe mostrar advertencia y campos propios de transferencia
     expect(
-      screen.getByText(/pago con tarjeta no disponible aún/i)
+      screen.getByText(/pendiente de validación hasta confirmar la transferencia/i)
     ).toBeInTheDocument();
+    expect(screen.getByLabelText(/comprobante de transferencia/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/referencia de transferencia/i)).toBeInTheDocument();
 
-    // El botón "Confirmar" debe estar deshabilitado
+    // Transferencia permite confirmar para crear la venta pending
     const confirmBtn = screen.getByRole('button', { name: /confirmar/i });
-    expect(confirmBtn).toBeDisabled();
+    expect(confirmBtn).not.toBeDisabled();
   });
 
   it('cash payment blocks confirmation when amount is insufficient', async () => {

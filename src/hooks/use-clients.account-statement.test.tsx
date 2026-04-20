@@ -54,7 +54,7 @@ describe('client credit account hooks', () => {
             total_paid: 50,
             balance: 150,
             status: 'partial',
-            payments: [{ id: 1, client_id: 1, sale_id: 10, amount: 50, created_at: '2026-04-10T15:00:00Z' }],
+            payments: [{ id: 1, client_id: 1, sale_id: 10, amount: 50, payment_method: 'cash', created_at: '2026-04-10T15:00:00Z' }],
           },
         ],
       },
@@ -77,10 +77,11 @@ describe('client credit account hooks', () => {
       data: {
         id: 1,
         client_id: 1,
-        sale_id: null,
-        amount: 100,
-        note: 'Efectivo',
-        created_at: '2026-04-10T15:00:00Z',
+      sale_id: null,
+      amount: 100,
+      payment_method: 'cash',
+      note: 'Efectivo',
+      created_at: '2026-04-10T15:00:00Z',
       },
     });
 
@@ -93,6 +94,8 @@ describe('client credit account hooks', () => {
     expect(mockedApiPost).toHaveBeenCalledWith('/api/clients/1/payments', {
       sale_id: null,
       amount: 100,
+      payment_method: 'cash',
+      reference_note: undefined,
       note: 'Efectivo',
     });
   });

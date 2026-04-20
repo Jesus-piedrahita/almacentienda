@@ -36,6 +36,7 @@ vi.mock('@/lib/api', () => ({
     get: vi.fn(),
     post: vi.fn(),
   },
+  uploadTransferProof: vi.fn(),
 }));
 
 vi.mock('@/hooks/use-clients', () => ({
@@ -160,6 +161,7 @@ describe('PaymentDialog', () => {
   // ── Flujo efectivo exitoso ─────────────────────────────────────────────────
 
   it('llama POST /api/sales con payload correcto al confirmar con efectivo', async () => {
+    vi.useFakeTimers();
     mockedApiPost.mockResolvedValueOnce({ data: mockApiSaleResponse });
     const onOpenChange = vi.fn();
     renderDialog({ onOpenChange });
@@ -176,11 +178,13 @@ describe('PaymentDialog', () => {
     // Esperar a que el timer de 800ms del estado de éxito se resuelva
     // para no contaminar los tests siguientes con completeSale()
     await act(async () => {
-      await new Promise<void>((r) => setTimeout(r, 900));
+      await vi.runAllTimersAsync();
     });
+    vi.useRealTimers();
   });
 
   it('muestra estado de éxito después de que la API resuelve', async () => {
+    vi.useFakeTimers();
     mockedApiPost.mockResolvedValueOnce({ data: mockApiSaleResponse });
     renderDialog();
 
@@ -188,15 +192,14 @@ describe('PaymentDialog', () => {
       fireEvent.click(screen.getByRole('button', { name: /confirmar/i }));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('¡Venta completada!')).toBeInTheDocument();
-    });
+    expect(screen.getByText('¡Venta completada!')).toBeInTheDocument();
 
     // Esperar a que el timer de 800ms se resuelva dentro de este test
     // para que completeSale() no contamine los tests siguientes
     await act(async () => {
-      await new Promise<void>((r) => setTimeout(r, 900));
+      await vi.runAllTimersAsync();
     });
+    vi.useRealTimers();
   });
 
   it('limpia el carrito solo después de que la API resuelve exitosamente', async () => {
@@ -289,6 +292,17 @@ describe('PaymentDialog', () => {
     });
   });
 
+  it('muestra campos de transferencia al seleccionar transferencia', async () => {
+    renderDialog();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /transfer/i }));
+    });
+
+    expect(screen.getByLabelText(/comprobante de transferencia/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/referencia de transferencia/i)).toBeInTheDocument();
+  });
+
   // ── Error de API ───────────────────────────────────────────────────────────
 
   it('muestra mensaje de error inline cuando la API falla', async () => {
@@ -327,6 +341,7 @@ describe('PaymentDialog', () => {
     mockedApiPost.mockRejectedValueOnce({
       response: { data: { detail: 'Stock insuficiente' } },
     });
+    const completeSaleSpy = vi.spyOn(useSalesStore.getState(), 'completeSale');
     renderDialog();
 
     await act(async () => {
@@ -337,8 +352,8 @@ describe('PaymentDialog', () => {
       expect(screen.getByText(/stock insuficiente/i)).toBeInTheDocument();
     });
 
-    // Carrito NO fue limpiado
-    expect(useSalesStore.getState().items).toHaveLength(1);
+    // El flujo de éxito no debe ejecutarse si la API falla
+    expect(completeSaleSpy).not.toHaveBeenCalled();
   });
 
   it('resetea el estado de procesamiento a idle tras un error', async () => {

@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useUploadTransferProof } from '@/hooks/use-transfers';
 import type {
   Client,
   CreateClientInput,
@@ -85,6 +86,11 @@ interface ApiDebtPayment {
   client_id: number;
   sale_id: number | null;
   amount: number;
+  payment_method: 'cash' | 'transfer';
+  transfer_proof_id?: number | null;
+  transfer_status?: 'pending' | 'confirmed' | 'rejected' | null;
+  transfer_proof_url?: string | null;
+  reference_note?: string | null;
   note?: string;
   created_at: string;
 }
@@ -157,6 +163,14 @@ function mapApiDebtPayment(apiPayment: ApiDebtPayment): DebtPayment {
     clientId: String(apiPayment.client_id),
     saleId: apiPayment.sale_id !== null ? String(apiPayment.sale_id) : null,
     amount: Number(apiPayment.amount),
+    paymentMethod: apiPayment.payment_method,
+    transferProofId:
+      apiPayment.transfer_proof_id !== undefined && apiPayment.transfer_proof_id !== null
+        ? String(apiPayment.transfer_proof_id)
+        : null,
+    transferStatus: apiPayment.transfer_status ?? null,
+    transferProofUrl: apiPayment.transfer_proof_url ?? null,
+    referenceNote: apiPayment.reference_note ?? null,
     note: apiPayment.note,
     createdAt: apiPayment.created_at,
   };
@@ -400,15 +414,27 @@ export function useMarkDebtPaid() {
  */
 export function useRegisterPayment(clientId: string) {
   const queryClient = useQueryClient();
+  const uploadTransferProof = useUploadTransferProof();
 
   return useMutation({
     mutationFn: async (input: RegisterPaymentInput): Promise<DebtPayment> => {
       const response = await api.post<ApiDebtPayment>(`/api/clients/${clientId}/payments`, {
         sale_id: input.saleId ? Number(input.saleId) : null,
         amount: input.amount,
+        payment_method: input.paymentMethod ?? 'cash',
+        reference_note: input.paymentMethod === 'transfer' ? input.referenceNote : undefined,
         note: input.note,
       });
-      return mapApiDebtPayment(response.data);
+      const payment = mapApiDebtPayment(response.data);
+
+      if (input.paymentMethod === 'transfer' && input.transferFile && payment.transferProofId) {
+        await uploadTransferProof.mutateAsync({
+          proofId: payment.transferProofId,
+          file: input.transferFile,
+        });
+      }
+
+      return payment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.clientCreditAccount(clientId) });

@@ -30,6 +30,8 @@ const INITIAL_STATE: SalesState = {
   amountReceived: 0,
   checkoutPhase: 'idle',
   selectedClientId: null,
+  transferFile: null,
+  transferReferenceNote: '',
 };
 
 // ---------------------------------------------------------------------------
@@ -112,6 +114,8 @@ export const useSalesStore = create<SalesStore>((set) => ({
       paymentMethod: 'cash',
       checkoutPhase: 'idle',
       selectedClientId: null,
+      transferFile: null,
+      transferReferenceNote: '',
     }),
 
   // ─── Acciones de pago ─────────────────────────────────────────────────────
@@ -123,6 +127,8 @@ export const useSalesStore = create<SalesStore>((set) => ({
     set((state) => ({
       paymentMethod: method,
       selectedClientId: method === 'credit' ? state.selectedClientId : null,
+      transferFile: method === 'transfer' ? state.transferFile : null,
+      transferReferenceNote: method === 'transfer' ? state.transferReferenceNote : '',
     })),
 
   /**
@@ -130,6 +136,18 @@ export const useSalesStore = create<SalesStore>((set) => ({
    */
   setSelectedClientId: (clientId: string | null) =>
     set({ selectedClientId: clientId }),
+
+  /**
+   * Establece archivo temporal de transferencia.
+   */
+  setTransferFile: (file: File | null) =>
+    set({ transferFile: file }),
+
+  /**
+   * Establece referencia textual de transferencia.
+   */
+  setTransferReferenceNote: (referenceNote: string) =>
+    set({ transferReferenceNote: referenceNote }),
 
   /**
    * Establece el monto recibido del cliente (modo efectivo).
@@ -166,6 +184,8 @@ export const useSalesStore = create<SalesStore>((set) => ({
       checkoutPhase: 'idle',
       amountReceived: 0,
       selectedClientId: null,
+      transferFile: null,
+      transferReferenceNote: '',
     }),
 }));
 

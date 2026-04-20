@@ -50,7 +50,34 @@ describe('RegisterPaymentModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /guardar abono/i }));
 
     await waitFor(() => {
-      expect(mutateAsync).toHaveBeenCalledWith({ saleId: '10', amount: 50, note: 'Efectivo' });
+      expect(mutateAsync).toHaveBeenCalledWith({
+        saleId: '10',
+        amount: 50,
+        paymentMethod: 'cash',
+        transferFile: null,
+        referenceNote: undefined,
+        note: 'Efectivo',
+      });
+    });
+  });
+
+  it('envía paymentMethod transfer cuando se selecciona transferencia', async () => {
+    mutateAsync.mockResolvedValueOnce(undefined);
+
+    render(
+      <RegisterPaymentModal open onOpenChange={vi.fn()} clientId="1" saleId="10" saleLabel="Venta #10" maxAmount={100} />,
+      { wrapper: makeWrapper() }
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /transferencia/i }));
+    fireEvent.change(screen.getByLabelText(/monto del abono/i), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText(/referencia de transferencia/i), { target: { value: 'REF-1' } });
+    fireEvent.click(screen.getByRole('button', { name: /guardar abono/i }));
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ saleId: '10', amount: 50, paymentMethod: 'transfer', referenceNote: 'REF-1' })
+      );
     });
   });
 });

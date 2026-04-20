@@ -26,6 +26,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import type { Sale, SalesPagination, CreateSaleInput } from '@/types/sales';
 import { queryKeys as inventoryQueryKeys } from '@/hooks/use-inventory';
+import { useUploadTransferProof } from '@/hooks/use-transfers';
 
 // ============================================================
 // Types privados de la API (snake_case — forma del backend)
@@ -47,7 +48,11 @@ interface ApiSale {
   client_id: number | null;
   client_name: string | null;
   state: 'completed' | 'cancelled';
-  payment_method: 'cash' | 'credit';
+  payment_method: 'cash' | 'credit' | 'transfer';
+  transfer_proof_id?: number | null;
+  transfer_status?: 'pending' | 'confirmed' | 'rejected' | null;
+  transfer_proof_url?: string | null;
+  reference_note?: string | null;
   subtotal: number;
   total: number;
   created_at: string;          // ISO datetime
@@ -92,6 +97,13 @@ export function mapApiSaleToSale(apiSale: ApiSale): Sale {
     clientName: apiSale.client_name,
     state: apiSale.state,
     paymentMethod: apiSale.payment_method,
+    transferProofId:
+      apiSale.transfer_proof_id !== undefined && apiSale.transfer_proof_id !== null
+        ? String(apiSale.transfer_proof_id)
+        : null,
+    transferStatus: apiSale.transfer_status ?? null,
+    transferProofUrl: apiSale.transfer_proof_url ?? null,
+    referenceNote: apiSale.reference_note ?? null,
     subtotal: Number(apiSale.subtotal),
     total: Number(apiSale.total),
     createdAt: apiSale.created_at,
@@ -124,6 +136,7 @@ export const salesQueryKeys = {
  */
 export function useCreateSale() {
   const queryClient = useQueryClient();
+  const uploadTransferProof = useUploadTransferProof();
 
   return useMutation({
     mutationFn: async (input: CreateSaleInput): Promise<Sale> => {
@@ -132,6 +145,9 @@ export function useCreateSale() {
         ...(input.paymentMethod === 'credit' && input.clientId
           ? { client_id: Number(input.clientId) }
           : {}),
+        ...(input.paymentMethod === 'transfer' && input.referenceNote
+          ? { reference_note: input.referenceNote }
+          : {}),
         items: input.items.map((item) => ({
           product_id: Number(item.productId),
           quantity: item.quantity,
@@ -139,7 +155,18 @@ export function useCreateSale() {
       };
 
       const response = await api.post<ApiSale>('/api/sales', payload);
-      return mapApiSaleToSale(response.data);
+      const sale = mapApiSaleToSale(response.data);
+
+      if (input.paymentMethod === 'transfer' && input.transferFile && sale.transferProofId) {
+        await uploadTransferProof.mutateAsync({
+          proofId: sale.transferProofId,
+          file: input.transferFile,
+        });
+        const refreshed = await api.get<ApiSale>(`/api/sales/${sale.id}`);
+        return mapApiSaleToSale(refreshed.data);
+      }
+
+      return sale;
     },
     onSuccess: () => {
       // Invalidar ventas

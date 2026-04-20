@@ -26,7 +26,18 @@ describe('CreditAccountDialog', () => {
               totalPaid: 100,
               balance: 100,
               status: 'partial',
-              payments: [],
+              payments: [{
+                id: '1',
+                clientId: '1',
+                saleId: '10',
+                amount: 25,
+                paymentMethod: 'transfer',
+                transferProofId: '11',
+                transferStatus: 'pending',
+                transferProofUrl: 'https://example.com/proof.png',
+                referenceNote: 'REF-1',
+                createdAt: '2026-04-10T15:00:00Z',
+              }],
             },
             {
               saleId: null,
@@ -47,5 +58,6 @@ describe('CreditAccountDialog', () => {
     expect(screen.getByText(/juan pérez/i)).toBeInTheDocument();
     expect(screen.getByText(/consumos anteriores/i)).toBeInTheDocument();
     expect(screen.getAllByText(/registrar abono/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/^pendiente$/i)).toBeInTheDocument();
   });
 });

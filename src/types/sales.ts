@@ -24,9 +24,17 @@ export interface CartItem {
 export const PAYMENT_METHOD = {
   CASH: 'cash',
   CREDIT: 'credit',
+  TRANSFER: 'transfer',
+} as const;
+
+export const TRANSFER_STATUS = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+  REJECTED: 'rejected',
 } as const;
 
 export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD];
+export type TransferStatus = (typeof TRANSFER_STATUS)[keyof typeof TRANSFER_STATUS];
 
 /**
  * Fase del proceso de checkout
@@ -53,6 +61,10 @@ export interface SalesState {
   checkoutPhase: CheckoutPhase;
   /** Cliente seleccionado para venta fiada */
   selectedClientId: string | null;
+  /** Archivo temporal del comprobante de transferencia */
+  transferFile: File | null;
+  /** Referencia opcional de transferencia */
+  transferReferenceNote: string;
 }
 
 /**
@@ -71,6 +83,10 @@ export interface SalesActions {
   setPaymentMethod: (method: PaymentMethod) => void;
   /** Establece el cliente seleccionado para venta fiada */
   setSelectedClientId: (clientId: string | null) => void;
+  /** Establece archivo temporal de transferencia */
+  setTransferFile: (file: File | null) => void;
+  /** Establece referencia de transferencia */
+  setTransferReferenceNote: (referenceNote: string) => void;
   /** Establece el monto recibido del cliente */
   setAmountReceived: (amount: number) => void;
   /** Abre la fase de pago (solo si hay items) */
@@ -108,7 +124,11 @@ export interface Sale {
   clientId: string | null;
   clientName: string | null;
   state: 'completed' | 'cancelled';
-  paymentMethod: 'cash' | 'credit';
+  paymentMethod: PaymentMethod;
+  transferProofId: string | null;
+  transferStatus: TransferStatus | null;
+  transferProofUrl: string | null;
+  referenceNote: string | null;
   subtotal: number;
   total: number;
   createdAt: string;
@@ -133,5 +153,7 @@ export interface SalesPagination {
 export interface CreateSaleInput {
   paymentMethod: PaymentMethod;
   clientId?: string | null;
+  referenceNote?: string;
+  transferFile?: File | null;
   items: Array<{ productId: string; quantity: number }>;
 }

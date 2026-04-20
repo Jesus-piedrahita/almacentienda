@@ -52,6 +52,7 @@ import type { PaymentMethod } from '@/types/sales';
 import { useCreateSale } from '@/hooks/use-sales';
 import { useClients } from '@/hooks/use-clients';
 import { useCurrency } from '@/hooks/use-currency';
+import { TransferFields } from '@/components/sales/transfer-fields';
 
 // ---------------------------------------------------------------------------
 // Tipos internos
@@ -90,8 +91,12 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     paymentMethod,
     amountReceived,
     selectedClientId,
+    transferFile,
+    transferReferenceNote,
     setPaymentMethod,
     setSelectedClientId,
+    setTransferFile,
+    setTransferReferenceNote,
     setAmountReceived,
     completeSale,
     resetCheckout,
@@ -100,8 +105,12 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
       paymentMethod: s.paymentMethod,
       amountReceived: s.amountReceived,
       selectedClientId: s.selectedClientId,
+      transferFile: s.transferFile,
+      transferReferenceNote: s.transferReferenceNote,
       setPaymentMethod: s.setPaymentMethod,
       setSelectedClientId: s.setSelectedClientId,
+      setTransferFile: s.setTransferFile,
+      setTransferReferenceNote: s.setTransferReferenceNote,
       setAmountReceived: s.setAmountReceived,
       completeSale: s.completeSale,
       resetCheckout: s.resetCheckout,
@@ -126,6 +135,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   // ─── Derivados de validación ────────────────────────────────────────────
   const isCash = paymentMethod === 'cash';
   const isCredit = paymentMethod === 'credit';
+  const isTransfer = paymentMethod === 'transfer';
   const { formatAmount, displayCurrency } = useCurrency();
 
   const canConfirm =
@@ -143,6 +153,10 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     // Resetear monto al cambiar método
     if (method === 'credit') {
       setAmountReceived(0);
+    }
+    if (method !== 'transfer') {
+      setTransferFile(null);
+      setTransferReferenceNote('');
     }
     if (method !== 'credit') {
       setSelectedClientId(null);
@@ -165,6 +179,8 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
       await createSale.mutateAsync({
         paymentMethod,
         clientId: isCredit ? selectedClientId : null,
+        referenceNote: isTransfer ? transferReferenceNote.trim() : undefined,
+        transferFile: isTransfer ? transferFile : null,
         items: storeState.items.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -261,7 +277,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
           {/* Selector de método de pago */}
           <div className="space-y-2">
             <Label>Método de pago</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 type="button"
                 variant={paymentMethod === 'cash' ? 'default' : 'outline'}
@@ -281,6 +297,16 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               >
                 <Users className="size-4" />
                 Fiado
+              </Button>
+              <Button
+                type="button"
+                variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
+                className={cn('gap-2', paymentMethod === 'transfer' && 'ring-2 ring-primary ring-offset-2')}
+                onClick={() => handleMethodChange('transfer')}
+                disabled={processing !== 'idle'}
+              >
+                <CreditCard className="size-4" />
+                Transfer.
               </Button>
             </div>
           </div>
@@ -365,6 +391,26 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               >
                 <Users className="size-4 shrink-0" />
                 Esta venta quedará registrada como deuda pendiente del cliente seleccionado.
+              </div>
+            </div>
+          )}
+
+          {isTransfer && (
+            <div className="space-y-3">
+              <TransferFields
+                file={transferFile}
+                referenceNote={transferReferenceNote}
+                onFileChange={setTransferFile}
+                onReferenceNoteChange={setTransferReferenceNote}
+                disabled={processing !== 'idle'}
+              />
+
+              <div
+                role="alert"
+                className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2"
+              >
+                <AlertCircle className="size-4 shrink-0" />
+                La venta quedará pendiente de validación hasta confirmar la transferencia.
               </div>
             </div>
           )}

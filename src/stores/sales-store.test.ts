@@ -208,6 +208,16 @@ describe('useSalesStore: clearCart', () => {
     expect(useSalesStore.getState().selectedClientId).toBeNull();
   });
 
+  it('resetea transferFile y transferReferenceNote', () => {
+    const file = new File(['proof'], 'proof.png', { type: 'image/png' });
+    useSalesStore.getState().setTransferFile(file);
+    useSalesStore.getState().setTransferReferenceNote('REF-1');
+    useSalesStore.getState().clearCart();
+
+    expect(useSalesStore.getState().transferFile).toBeNull();
+    expect(useSalesStore.getState().transferReferenceNote).toBe('');
+  });
+
   it('resetea checkoutPhase a "idle"', () => {
     useSalesStore.getState().openCheckout(); // pasa a 'payment'
     useSalesStore.getState().clearCart();
@@ -290,6 +300,15 @@ describe('useSalesStore: selectedClientId', () => {
   it('permite setear selectedClientId', () => {
     useSalesStore.getState().setSelectedClientId('client-99');
     expect(useSalesStore.getState().selectedClientId).toBe('client-99');
+  });
+
+  it('permite setear transferFile y transferReferenceNote', () => {
+    const file = new File(['proof'], 'proof.png', { type: 'image/png' });
+    useSalesStore.getState().setTransferFile(file);
+    useSalesStore.getState().setTransferReferenceNote('REF-99');
+
+    expect(useSalesStore.getState().transferFile).toBe(file);
+    expect(useSalesStore.getState().transferReferenceNote).toBe('REF-99');
   });
 
   it('limpia selectedClientId al cambiar paymentMethod fuera de credit', () => {
