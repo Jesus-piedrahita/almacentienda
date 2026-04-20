@@ -2,12 +2,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router"
 import { useEffect } from "react"
 
 import { AuthPage } from "./pages/auth-page"
+import { SessionActivityTracker } from "./components/auth/session-activity-tracker"
 import { DashboardPage } from "./pages/dashboard-page"
 import { InventoryPage } from "./pages/inventory-page"
 import { ClientsPage } from "./pages/clients-page"
 import { SalesPage } from "./pages/sales-page"
 import { SettingsPage } from "./pages/settings-page"
 import { ReportsPage } from "./pages/reports-page"
+import { SessionTraceabilityPage } from "./pages/session-traceability-page"
 import { TransfersPage } from "./pages/transfers-page"
 import { MainLayout } from "./components/layout/main-layout"
 import { AuthInitializingShell } from "./components/auth/auth-initializing-shell"
@@ -68,7 +70,10 @@ function App() {
           <Route
             element={
               <ProtectedRoute>
-                <MainLayout />
+                <>
+                  <SessionActivityTracker />
+                  <MainLayout />
+                </>
               </ProtectedRoute>
             }
           >
@@ -79,6 +84,7 @@ function App() {
             <Route path="/transfers" element={<TransfersPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/session-traceability" element={<SessionTraceabilityPage />} />
           </Route>
 
           {/* Catch-all — redirige rutas no reconocidas al login */}

@@ -107,6 +107,7 @@ describe('App auth routes — AuthRedirect con ruta auth unificada', () => {
       isAuthenticated: false,
       user: null,
       token: null,
+      sessionId: null,
       isInitialized: true,
     });
     vi.clearAllMocks();
@@ -140,6 +141,7 @@ describe('App auth routes — AuthRedirect con ruta auth unificada', () => {
       isAuthenticated: true,
       isInitialized: true,
       token: 'fake-token',
+      sessionId: 'session-1',
       user: { id: 1, email: 'user@test.com', is_active: true, created_at: '2026-01-01T00:00:00Z' },
     });
 
@@ -156,6 +158,7 @@ describe('App auth routes — AuthRedirect con ruta auth unificada', () => {
       isAuthenticated: true,
       isInitialized: true,
       token: 'fake-token',
+      sessionId: 'session-1',
       user: { id: 1, email: 'user@test.com', is_active: true, created_at: '2026-01-01T00:00:00Z' },
     });
 
@@ -177,7 +180,7 @@ describe('App auth routes — AuthRedirect con ruta auth unificada', () => {
   });
 
   it('el branding de AuthLayout NO aparece cuando usuario autenticado es redirigido', () => {
-    useAuthStore.setState({ isAuthenticated: true, isInitialized: true, token: 'fake-token' });
+    useAuthStore.setState({ isAuthenticated: true, isInitialized: true, token: 'fake-token', sessionId: 'session-1' });
 
     renderAuthRoutes('/login');
 
@@ -188,7 +191,7 @@ describe('App auth routes — AuthRedirect con ruta auth unificada', () => {
   });
 
   it('muestra un shell neutro mientras auth todavía no se inicializó', () => {
-    useAuthStore.setState({ isAuthenticated: false, isInitialized: false, token: null, user: null });
+    useAuthStore.setState({ isAuthenticated: false, isInitialized: false, token: null, sessionId: null, user: null });
 
     renderAuthRoutes('/login');
 

@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router';
 
-import type { UserResponse } from '@/lib/api';
 import { useLogin } from '@/hooks/use-auth';
 import { loginSchema, type LoginFormData } from '@/lib/validations/login-schema';
 import { useAuthStore } from '@/stores/auth-store';
@@ -37,14 +36,7 @@ export function LoginForm() {
         password: data.password,
       });
 
-      const userData: UserResponse = {
-        id: 0,
-        email: data.email,
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
-
-      setAuth(response.access_token, userData);
+      setAuth(response.access_token, response.user, response.session_id);
       navigate('/');
     } catch (error) {
       console.error('Login error:', error);

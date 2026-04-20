@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { mapApiTransferProofSummary } from './use-transfers';
+import {
+  getNextTransfersPageParam,
+  mapApiTransferProofSummary,
+  transferQueryKeys,
+} from './use-transfers';
 
 describe('mapApiTransferProofSummary', () => {
   it('mapea proof_mime_type a proofMimeType', () => {
@@ -63,5 +67,38 @@ describe('mapApiTransferProofSummary', () => {
     expect(mapped.proofUrl).toBeNull();
     expect(mapped.clientName).toBeNull();
     expect(mapped.saleContext).toBeNull();
+  });
+
+  it('deriva la siguiente página cuando todavía hay más resultados', () => {
+    expect(
+      getNextTransfersPageParam({
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 25,
+          totalPages: 3,
+        },
+      })
+    ).toBe(2);
+  });
+
+  it('no deriva siguiente página cuando ya llegó al final', () => {
+    expect(
+      getNextTransfersPageParam({
+        data: [],
+        pagination: {
+          page: 2,
+          limit: 10,
+          total: 20,
+          totalPages: 2,
+        },
+      })
+    ).toBeUndefined();
+  });
+
+  it('usa query keys separadas por status procesado', () => {
+    expect(transferQueryKeys.history('confirmed')).toEqual(['transfers', 'history', 'confirmed']);
+    expect(transferQueryKeys.history('rejected')).toEqual(['transfers', 'history', 'rejected']);
   });
 });

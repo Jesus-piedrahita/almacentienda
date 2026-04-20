@@ -9,6 +9,7 @@ import {
   Package,
   ShoppingCart,
   BarChart3,
+  History,
   Settings,
   LogOut,
   Store,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useLogout } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -59,6 +61,11 @@ const navItems = [
     href: "/settings",
     icon: Settings,
   },
+  {
+    label: "Sesiones",
+    href: "/session-traceability",
+    icon: History,
+  },
 ];
 
 /**
@@ -76,8 +83,15 @@ const navItems = [
 export function Sidebar() {
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const logoutMutation = useLogout();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+    } catch {
+      // El cleanup local debe ocurrir aunque la sesión ya haya sido invalidada.
+    }
+
     logout();
   };
 

@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import api, { uploadTransferProof } from '@/lib/api';
 import type {
+  ProcessedTransferStatus,
   TransferProofList,
   TransferSaleContext,
   TransferProofSummary,
@@ -93,29 +94,75 @@ function mapApiTransferProofSummary(apiTransfer: ApiTransferProofSummary): Trans
 
 export { mapApiTransferProofSummary };
 
+function mapApiTransferProofList(apiTransferList: ApiTransferProofList): TransferProofList {
+  return {
+    data: apiTransferList.data.map(mapApiTransferProofSummary),
+    pagination: {
+      page: apiTransferList.pagination.page,
+      limit: apiTransferList.pagination.limit,
+      total: apiTransferList.pagination.total,
+      totalPages: apiTransferList.pagination.total_pages,
+    },
+  };
+}
+
+async function fetchTransferProofList({
+  status,
+  page = 1,
+  limit = 20,
+}: {
+  status?: 'pending' | ProcessedTransferStatus;
+  page?: number;
+  limit?: number;
+}): Promise<TransferProofList> {
+  const response = await api.get<ApiTransferProofList>('/api/transfers', {
+    params: {
+      ...(status ? { status } : {}),
+      page,
+      limit,
+    },
+  });
+
+  return mapApiTransferProofList(response.data);
+}
+
+export function getNextTransfersPageParam(lastPage: TransferProofList): number | undefined {
+  if (lastPage.pagination.totalPages <= 0) {
+    return undefined;
+  }
+
+  if (lastPage.pagination.page >= lastPage.pagination.totalPages) {
+    return undefined;
+  }
+
+  return lastPage.pagination.page + 1;
+}
+
 export const transferQueryKeys = {
   all: ['transfers'] as const,
   list: (status?: string) => ['transfers', 'list', status ?? 'all'] as const,
+  history: (status: ProcessedTransferStatus) => ['transfers', 'history', status] as const,
 };
 
 export function useTransfers(status?: 'pending' | 'confirmed' | 'rejected') {
   return useQuery({
     queryKey: transferQueryKeys.list(status),
-    queryFn: async (): Promise<TransferProofList> => {
-      const response = await api.get<ApiTransferProofList>('/api/transfers', {
-        params: status ? { status } : undefined,
-      });
+    queryFn: async (): Promise<TransferProofList> => fetchTransferProofList({ status }),
+    staleTime: 1000 * 30,
+  });
+}
 
-      return {
-        data: response.data.data.map(mapApiTransferProofSummary),
-        pagination: {
-          page: response.data.pagination.page,
-          limit: response.data.pagination.limit,
-          total: response.data.pagination.total,
-          totalPages: response.data.pagination.total_pages,
-        },
-      };
-    },
+export function useInfiniteTransfers(status: ProcessedTransferStatus) {
+  return useInfiniteQuery({
+    queryKey: transferQueryKeys.history(status),
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<TransferProofList> =>
+      fetchTransferProofList({
+        status,
+        page: typeof pageParam === 'number' ? pageParam : 1,
+        limit: 10,
+      }),
+    getNextPageParam: getNextTransfersPageParam,
     staleTime: 1000 * 30,
   });
 }

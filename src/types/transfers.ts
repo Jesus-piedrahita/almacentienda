@@ -9,8 +9,15 @@ export const TRANSFER_ACTION = {
   REJECT: 'reject',
 } as const;
 
+export const PROCESSED_TRANSFER_STATUS = {
+  CONFIRMED: 'confirmed',
+  REJECTED: 'rejected',
+} as const;
+
 export type TransferStatus = (typeof TRANSFER_STATUS)[keyof typeof TRANSFER_STATUS];
 export type TransferAction = (typeof TRANSFER_ACTION)[keyof typeof TRANSFER_ACTION];
+export type ProcessedTransferStatus =
+  (typeof PROCESSED_TRANSFER_STATUS)[keyof typeof PROCESSED_TRANSFER_STATUS];
 
 export interface TransferSaleContextItem {
   productName: string;

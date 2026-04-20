@@ -5,7 +5,22 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 
-import api, { type LoginRequest, type LoginResponse, type RegisterRequest, type UserResponse } from '@/lib/api';
+import api, {
+  fetchSessionTraceDetail,
+  fetchSessionTraces,
+  ingestSessionActivity,
+  logoutSession,
+  type LoginRequest,
+  type LoginResponse,
+  type RegisterRequest,
+  type UserResponse,
+} from '@/lib/api';
+import type {
+  SessionActivityAccepted,
+  SessionActivityPayload,
+  SessionTraceDetail,
+  SessionTraceSummary,
+} from '@/types/session-traceability';
 
 /**
  * Hook para iniciar sesión.
@@ -105,5 +120,40 @@ export function useCurrentUser() {
     retry: false,
     // Don't fetch if no token in localStorage
     enabled: typeof window !== 'undefined' && !!localStorage.getItem('auth_token'),
+  });
+}
+
+export const sessionTraceabilityQueryKeys = {
+  all: ['session-traceability'] as const,
+  list: () => ['session-traceability', 'list'] as const,
+  detail: (sessionId: string) => ['session-traceability', 'detail', sessionId] as const,
+};
+
+export function useLogout() {
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      await logoutSession();
+    },
+  });
+}
+
+export function useTrackSessionActivity() {
+  return useMutation<SessionActivityAccepted, Error, SessionActivityPayload>({
+    mutationFn: ingestSessionActivity,
+  });
+}
+
+export function useSessionTraces() {
+  return useQuery<SessionTraceSummary[], Error>({
+    queryKey: sessionTraceabilityQueryKeys.list(),
+    queryFn: fetchSessionTraces,
+  });
+}
+
+export function useSessionTraceDetail(sessionId: string | null) {
+  return useQuery<SessionTraceDetail, Error>({
+    queryKey: sessionTraceabilityQueryKeys.detail(sessionId ?? ''),
+    queryFn: async () => fetchSessionTraceDetail(sessionId ?? ''),
+    enabled: !!sessionId,
   });
 }
