@@ -8,8 +8,8 @@ import { ClientsPage } from "./pages/clients-page"
 import { SalesPage } from "./pages/sales-page"
 import { SettingsPage } from "./pages/settings-page"
 import { ReportsPage } from "./pages/reports-page"
+import { TransfersPage } from "./pages/transfers-page"
 import { MainLayout } from "./components/layout/main-layout"
-import { AuthLayout } from "./components/auth/auth-layout"
 import { AuthInitializingShell } from "./components/auth/auth-initializing-shell"
 import { ProtectedRoute } from "./components/auth/protected-route"
 import { ConfirmDialogHost } from "./components/ui/confirm-dialog-host"
@@ -76,6 +76,7 @@ function App() {
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/sales" element={<SalesPage />} />
+            <Route path="/transfers" element={<TransfersPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
