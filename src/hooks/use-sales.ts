@@ -25,8 +25,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import type { Sale, SalesPagination, CreateSaleInput } from '@/types/sales';
-import { queryKeys as inventoryQueryKeys } from '@/hooks/use-inventory';
 import { useUploadTransferProof } from '@/hooks/use-transfers';
+import { invalidateOperationalQueries } from '@/lib/query-invalidation';
 
 // ============================================================
 // Types privados de la API (snake_case — forma del backend)
@@ -185,13 +185,8 @@ export function useCreateSale() {
 
       return sale;
     },
-    onSuccess: () => {
-      // Invalidar ventas
-      queryClient.invalidateQueries({ queryKey: salesQueryKeys.all });
-      // Invalidar inventario — la venta decrementa stock en el servidor
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.stats });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient);
     },
   });
 }

@@ -101,4 +101,9 @@ describe('mapApiTransferProofSummary', () => {
     expect(transferQueryKeys.history('confirmed')).toEqual(['transfers', 'history', 'confirmed']);
     expect(transferQueryKeys.history('rejected')).toEqual(['transfers', 'history', 'rejected']);
   });
+
+  it('mantiene namespace raíz de transferencias para invalidación global', () => {
+    expect(transferQueryKeys.all).toEqual(['transfers']);
+    expect(transferQueryKeys.list('pending')).toEqual(['transfers', 'list', 'pending']);
+  });
 });

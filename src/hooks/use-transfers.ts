@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import api, { uploadTransferProof } from '@/lib/api';
+import { invalidateOperationalQueries } from '@/lib/query-invalidation';
 import type {
   ProcessedTransferStatus,
   TransferProofList,
@@ -175,10 +176,8 @@ export function useUploadTransferProof() {
       const response = await uploadTransferProof(proofId, file);
       return response.data as ApiUploadTransferProofResponse;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transferQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, { includeTransfers: true });
     },
   });
 }
@@ -194,10 +193,8 @@ export function useValidateTransfer() {
       });
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: transferQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, { includeTransfers: true });
     },
   });
 }

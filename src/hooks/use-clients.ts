@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUploadTransferProof } from '@/hooks/use-transfers';
+import { invalidateOperationalQueries } from '@/lib/query-invalidation';
 import type {
   Client,
   CreateClientInput,
@@ -350,9 +351,13 @@ export function useCreateClient() {
       const response = await api.post<ApiClient>('/api/clients', input);
       return mapApiClientToClient(response.data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.clients });
-      queryClient.invalidateQueries({ queryKey: queryKeys.clientStats });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeClients: true,
+        includeReports: true,
+        includeInventory: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -368,9 +373,14 @@ export function useUpdateClient() {
       const response = await api.patch<ApiClient>(`/api/clients/${id}`, updates);
       return mapApiClientToClient(response.data);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.clients });
-      queryClient.invalidateQueries({ queryKey: queryKeys.client(data.id) });
+    onSuccess: async (data) => {
+      await invalidateOperationalQueries(queryClient, {
+        includeClients: true,
+        includeReports: true,
+        includeInventory: false,
+        includeSales: false,
+        clientId: data.id,
+      });
     },
   });
 }
@@ -385,9 +395,13 @@ export function useDeleteClient() {
     mutationFn: async (id: string): Promise<void> => {
       await api.delete(`/api/clients/${id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.clients });
-      queryClient.invalidateQueries({ queryKey: queryKeys.clientStats });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeClients: true,
+        includeReports: true,
+        includeInventory: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -399,12 +413,18 @@ export function useMarkDebtPaid() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (debtId: string): Promise<void> => {
+    mutationFn: async ({ debtId, clientId }: { debtId: string; clientId?: string }): Promise<{ clientId?: string }> => {
       await api.patch(`/api/clients/debts/${debtId}/pay`);
+      return { clientId };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.clientStats });
+    onSuccess: async ({ clientId }) => {
+      await invalidateOperationalQueries(queryClient, {
+        includeClients: true,
+        includeReports: true,
+        includeInventory: false,
+        includeSales: false,
+        clientId,
+      });
     },
   });
 }
@@ -436,11 +456,15 @@ export function useRegisterPayment(clientId: string) {
 
       return payment;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.clientCreditAccount(clientId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.clientDebts(clientId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.clientStats });
-      queryClient.invalidateQueries({ queryKey: queryKeys.clients });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeClients: true,
+        includeReports: true,
+        includeSales: true,
+        includeTransfers: true,
+        includeInventory: false,
+        clientId,
+      });
     },
   });
 }

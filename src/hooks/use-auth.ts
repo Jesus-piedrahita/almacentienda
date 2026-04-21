@@ -3,7 +3,7 @@
  * Provides useLogin, useRegister, and useCurrentUser hooks.
  */
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import api, {
   fetchSessionTraceDetail,
@@ -130,9 +130,17 @@ export const sessionTraceabilityQueryKeys = {
 };
 
 export function useLogout() {
+  const queryClient = useQueryClient();
+
   return useMutation<void, Error, void>({
     mutationFn: async () => {
       await logoutSession();
+    },
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+      queryClient.removeQueries({ queryKey: ['currentUser'] });
+      queryClient.removeQueries({ queryKey: sessionTraceabilityQueryKeys.all });
+      queryClient.clear();
     },
   });
 }

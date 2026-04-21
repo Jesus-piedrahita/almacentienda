@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import api from '@/lib/api';
+import { invalidateOperationalQueries } from '@/lib/query-invalidation';
 import type {
   Product,
   Category,
@@ -381,10 +382,15 @@ export function useAddProduct() {
       const response = await api.post<ApiProduct>('/api/inventory/products', productData);
       return mapApiProductToProduct(response.data);
     },
-    onSuccess: () => {
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeInventory: true,
+        includeCategories: true,
+        includeProductSearch: true,
+        includeReports: true,
+        includeClients: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -428,10 +434,15 @@ export function useUpdateProduct() {
       );
       return mapApiProductToProduct(response.data);
     },
-    onSuccess: () => {
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeInventory: true,
+        includeCategories: true,
+        includeProductSearch: true,
+        includeReports: true,
+        includeClients: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -446,10 +457,15 @@ export function useDeleteProduct() {
     mutationFn: async (id: string): Promise<void> => {
       await api.delete(`/api/inventory/products/${id}`);
     },
-    onSuccess: () => {
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeInventory: true,
+        includeCategories: true,
+        includeProductSearch: true,
+        includeReports: true,
+        includeClients: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -475,9 +491,15 @@ export function useBulkMarkup() {
       const response = await api.post<ApiBulkMarkupResult>('/api/inventory/products/bulk-markup', payload);
       return mapApiBulkMarkupResult(response.data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeInventory: true,
+        includeCategories: true,
+        includeProductSearch: true,
+        includeReports: true,
+        includeClients: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -500,9 +522,15 @@ export function useAddCategory() {
       const response = await api.post<ApiCategory>('/api/inventory/categories', payload);
       return mapApiCategoryToCategory(response.data);
     },
-    onSuccess: () => {
-      // Invalidar query de categorías
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeInventory: true,
+        includeCategories: true,
+        includeProductSearch: true,
+        includeReports: true,
+        includeClients: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -530,9 +558,15 @@ export function useUpdateCategory() {
       );
       return mapApiCategoryToCategory(response.data);
     },
-    onSuccess: () => {
-      // Invalidar queries de categorías
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeInventory: true,
+        includeCategories: true,
+        includeProductSearch: true,
+        includeReports: true,
+        includeClients: false,
+        includeSales: false,
+      });
     },
   });
 }
@@ -547,10 +581,15 @@ export function useDeleteCategory() {
     mutationFn: async (id: string): Promise<void> => {
       await api.delete(`/api/inventory/categories/${id}`);
     },
-    onSuccess: () => {
-      // Invalidar queries de categorías
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
-      queryClient.invalidateQueries({ queryKey: queryKeys.stats });
+    onSuccess: async () => {
+      await invalidateOperationalQueries(queryClient, {
+        includeInventory: true,
+        includeCategories: true,
+        includeProductSearch: true,
+        includeReports: true,
+        includeClients: false,
+        includeSales: false,
+      });
     },
   });
 }
