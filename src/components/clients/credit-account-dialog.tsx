@@ -17,6 +17,7 @@ import type { ClientCreditAccount, CreditSaleGroup } from '@/types/clients';
 import { RegisterPaymentModal } from './register-payment-modal';
 import { TransferStatusBadge } from '@/components/transfers/transfer-status-badge';
 
+
 interface CreditAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
