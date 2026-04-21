@@ -14,6 +14,9 @@ describe('OverviewSummaryCards', () => {
     render(
       <OverviewSummaryCards
         summary={{
+          netRevenue: 820,
+          collectedTaxes: 160,
+          grossRevenue: 980,
           totalSales: 1000,
           creditSales: 300,
           totalCollected: 120,
@@ -27,7 +30,9 @@ describe('OverviewSummaryCards', () => {
 
     expect(screen.getByTestId('reports-overview-section')).toBeInTheDocument();
     expect(screen.getByText('Resumen ejecutivo')).toBeInTheDocument();
-    expect(screen.getByText('money:1000')).toBeInTheDocument();
+    expect(screen.getByText('money:820')).toBeInTheDocument();
+    expect(screen.getByText('money:160')).toBeInTheDocument();
+    expect(screen.getByText('money:980')).toBeInTheDocument();
     expect(screen.getByText('money:180')).toBeInTheDocument();
     expect(screen.getByText('money:300')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();

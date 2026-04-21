@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCurrency } from '@/hooks/use-currency';
 import { formatMarkup, markupFromPrice, priceFromMarkup } from '@/lib/markup';
+import { PRODUCT_TAX_MODE } from '@/types/inventory';
 import type { Category, Product, UpdateProductInput } from '@/types/inventory';
 import { useUpdateProduct } from '@/hooks/use-inventory';
 
@@ -72,6 +73,8 @@ export function EditProductDialog({
           markupPct: product.markupPct,
           quantity: product.quantity,
           minStock: product.minStock,
+          taxMode: product.taxMode,
+          taxRate: product.taxRate,
           expiration_date: product.expiration_date,
         }
       : {
@@ -83,6 +86,8 @@ export function EditProductDialog({
           cost: 0,
           quantity: 0,
           minStock: 5,
+          taxMode: PRODUCT_TAX_MODE.INHERIT,
+          taxRate: null,
         }
   );
 
@@ -262,6 +267,51 @@ export function EditProductDialog({
                 <p className="text-xs text-destructive">{errors.name}</p>
               )}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-taxMode">Impuesto del producto</Label>
+              <select
+                id="edit-taxMode"
+                className="flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-sm"
+                value={formData.taxMode ?? PRODUCT_TAX_MODE.INHERIT}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    taxMode: e.target.value as UpdateProductInput['taxMode'],
+                    taxRate: e.target.value === PRODUCT_TAX_MODE.TAXED ? (prev.taxRate ?? 0.16) : null,
+                  }))
+                }
+                disabled={isLoading}
+              >
+                <option value={PRODUCT_TAX_MODE.INHERIT}>Heredar categoría</option>
+                <option value={PRODUCT_TAX_MODE.TAXED}>Gravado</option>
+                <option value={PRODUCT_TAX_MODE.EXEMPT}>Exento</option>
+                <option value={PRODUCT_TAX_MODE.NON_TAXABLE}>No gravado</option>
+              </select>
+              {(formData.taxMode ?? PRODUCT_TAX_MODE.INHERIT) === PRODUCT_TAX_MODE.INHERIT && (
+                <p className="text-xs text-muted-foreground">
+                  Heredado: {product.effectiveTaxMode} {product.effectiveTaxRate !== null ? `(${product.effectiveTaxRate})` : '(—)'}
+                </p>
+              )}
+            </div>
+
+            {(formData.taxMode ?? PRODUCT_TAX_MODE.INHERIT) === PRODUCT_TAX_MODE.TAXED && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-taxRate">Tasa IVA</Label>
+                <Input
+                  id="edit-taxRate"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={formData.taxRate ?? ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, taxRate: Number(e.target.value) }))}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
           </div>
 
           {/* Fila 2: Descripción */}

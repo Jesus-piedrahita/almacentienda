@@ -40,6 +40,8 @@ interface ApiSaleItem {
   unit_price: number;   // Decimal serializado como number en JSON
   unit_cost: number | null;
   subtotal: number;     // Decimal serializado como number en JSON
+  tax_rate_snapshot: number | null;
+  tax_amount: number;
 }
 
 interface ApiSale {
@@ -54,11 +56,22 @@ interface ApiSale {
   transfer_proof_url?: string | null;
   reference_note?: string | null;
   subtotal: number;
+  tax_total: number;
   total: number;
   created_at: string;          // ISO datetime
   cancelled_at: string | null;
   cancel_reason: string | null;
   items: ApiSaleItem[];
+}
+
+interface ApiTransferProofUploadResponse {
+  proof_id: number;
+  sale_id: number | null;
+  debt_payment_id: number | null;
+  status: 'pending' | 'confirmed' | 'rejected';
+  proof_url: string;
+  proof_filename: string;
+  uploaded_at: string;
 }
 
 interface ApiSalesPagination {
@@ -86,6 +99,9 @@ function mapApiSaleItemToSaleItem(apiItem: ApiSaleItem) {
     unitPrice: Number(apiItem.unit_price),
     unitCost: apiItem.unit_cost !== null ? Number(apiItem.unit_cost) : null,
     subtotal: Number(apiItem.subtotal),
+    taxRateSnapshot:
+      apiItem.tax_rate_snapshot !== null ? Number(apiItem.tax_rate_snapshot) : null,
+    taxAmount: Number(apiItem.tax_amount),
   };
 }
 
@@ -105,6 +121,7 @@ export function mapApiSaleToSale(apiSale: ApiSale): Sale {
     transferProofUrl: apiSale.transfer_proof_url ?? null,
     referenceNote: apiSale.reference_note ?? null,
     subtotal: Number(apiSale.subtotal),
+    taxTotal: Number(apiSale.tax_total),
     total: Number(apiSale.total),
     createdAt: apiSale.created_at,
     cancelledAt: apiSale.cancelled_at,
@@ -161,7 +178,7 @@ export function useCreateSale() {
         await uploadTransferProof.mutateAsync({
           proofId: sale.transferProofId,
           file: input.transferFile,
-        });
+        }) as ApiTransferProofUploadResponse;
         const refreshed = await api.get<ApiSale>(`/api/sales/${sale.id}`);
         return mapApiSaleToSale(refreshed.data);
       }

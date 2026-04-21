@@ -30,6 +30,10 @@ const product: Product = {
   cost: 6.00,
   quantity: 50,
   minStock: 5,
+  taxMode: 'inherit',
+  taxRate: null,
+  effectiveTaxMode: 'taxed',
+  effectiveTaxRate: 0.16,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };

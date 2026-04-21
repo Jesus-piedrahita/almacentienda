@@ -73,6 +73,9 @@ describe('ReportsPage', () => {
         rangeStart: '2026-04-01T00:00:00',
         rangeEnd: '2026-04-30T23:59:59',
         summary: {
+          netRevenue: 820,
+          collectedTaxes: 180,
+          grossRevenue: 1000,
           totalSales: 1000,
           creditSales: 300,
           totalCollected: 120,
@@ -113,6 +116,9 @@ describe('ReportsPage', () => {
         rangeStart: '2026-04-01T00:00:00',
         rangeEnd: '2026-04-30T23:59:59',
         summary: {
+          netRevenue: 820,
+          collectedTaxes: 180,
+          grossRevenue: 1000,
           totalSales: 1000,
           creditSales: 300,
           totalCollected: 120,

@@ -10,7 +10,34 @@ export interface Category {
   id: string;
   name: string;
   description?: string;
+  defaultTaxMode: CategoryTaxMode;
+  defaultTaxRate: number | null;
 }
+
+export const CATEGORY_TAX_MODE = {
+  TAXED: 'taxed',
+  EXEMPT: 'exempt',
+  NON_TAXABLE: 'non_taxable',
+} as const;
+
+export type CategoryTaxMode = (typeof CATEGORY_TAX_MODE)[keyof typeof CATEGORY_TAX_MODE];
+
+export const PRODUCT_TAX_MODE = {
+  INHERIT: 'inherit',
+  TAXED: 'taxed',
+  EXEMPT: 'exempt',
+  NON_TAXABLE: 'non_taxable',
+} as const;
+
+export type ProductTaxMode = (typeof PRODUCT_TAX_MODE)[keyof typeof PRODUCT_TAX_MODE];
+
+export const EFFECTIVE_TAX_MODE = {
+  TAXED: 'taxed',
+  EXEMPT: 'exempt',
+  NON_TAXABLE: 'non_taxable',
+} as const;
+
+export type EffectiveTaxMode = (typeof EFFECTIVE_TAX_MODE)[keyof typeof EFFECTIVE_TAX_MODE];
 
 /**
  * Datos para crear una nueva categoría
@@ -18,6 +45,8 @@ export interface Category {
 export interface CreateCategoryInput {
   name: string;
   description?: string;
+  defaultTaxMode: CategoryTaxMode;
+  defaultTaxRate?: number | null;
 }
 
 /**
@@ -40,6 +69,10 @@ export interface Product {
   markupPct?: number;
   quantity: number;
   minStock: number; // Stock mínimo para alerta
+  taxMode: ProductTaxMode;
+  taxRate: number | null;
+  effectiveTaxMode: EffectiveTaxMode;
+  effectiveTaxRate: number | null;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
   expiration_date?: string;
   createdAt: string;
@@ -85,6 +118,8 @@ export interface CreateProductInput {
   markupPct?: number;
   quantity: number;
   minStock: number;
+  taxMode: ProductTaxMode;
+  taxRate?: number | null;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
   expiration_date?: string;
 }
@@ -102,6 +137,8 @@ export interface UpdateProductInput {
   markupPct?: number;
   quantity?: number;
   minStock?: number;
+  taxMode?: ProductTaxMode;
+  taxRate?: number | null;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
   expiration_date?: string;
 }

@@ -42,11 +42,23 @@ export function OverviewSummaryCards({ summary }: OverviewSummaryCardsProps) {
       <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <div className="grid gap-4 sm:grid-cols-2">
           <MetricCard
-            title="Ventas totales"
-            value={formatAmount(summary.totalSales)}
-            hint="Total completado del período"
+            title="Ingresos netos"
+            value={formatAmount(summary.netRevenue)}
+            hint="Subtotal sin IVA"
             accentClassName="text-foreground"
             featured
+          />
+          <MetricCard
+            title="IVA cobrado"
+            value={formatAmount(summary.collectedTaxes)}
+            hint="Impuestos recaudados"
+            accentClassName="text-blue-600"
+          />
+          <MetricCard
+            title="Ingresos brutos"
+            value={formatAmount(summary.grossRevenue)}
+            hint="Neto + IVA"
+            accentClassName="text-indigo-600"
           />
           <MetricCard
             title="Saldo pendiente"

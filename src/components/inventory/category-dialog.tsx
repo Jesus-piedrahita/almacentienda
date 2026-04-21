@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CATEGORY_TAX_MODE } from '@/types/inventory';
 import type { Category, CreateCategoryInput } from '@/types/inventory';
 import { useAddCategory, useUpdateCategory } from '@/hooks/use-inventory';
 
@@ -60,6 +61,8 @@ export function CategoryDialog({
   const [formData, setFormData] = useState<CategoryFormData>({
     name: '',
     description: '',
+    defaultTaxMode: CATEGORY_TAX_MODE.TAXED,
+    defaultTaxRate: 0.16,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof CategoryFormData, string>>>({});
@@ -70,6 +73,8 @@ export function CategoryDialog({
       setFormData({
         name: category.name,
         description: category.description || '',
+        defaultTaxMode: category.defaultTaxMode,
+        defaultTaxRate: category.defaultTaxRate,
       });
     } else if (!open) {
       // Resetear al cerrar
@@ -90,6 +95,9 @@ export function CategoryDialog({
 
     if (!formData.name.trim()) {
       newErrors.name = 'El nombre es requerido';
+    }
+    if (formData.defaultTaxMode === CATEGORY_TAX_MODE.TAXED && (formData.defaultTaxRate ?? 0) < 0) {
+      newErrors.defaultTaxRate = 'La tasa debe ser mayor o igual a 0';
     }
 
     setErrors(newErrors);
@@ -124,6 +132,8 @@ export function CategoryDialog({
     setFormData({
       name: '',
       description: '',
+      defaultTaxMode: CATEGORY_TAX_MODE.TAXED,
+      defaultTaxRate: 0.16,
     });
     setErrors({});
   };
@@ -133,6 +143,22 @@ export function CategoryDialog({
       resetForm();
     }
     onOpenChange(isOpen);
+  };
+
+  const handleTaxModeChange = (mode: CategoryFormData['defaultTaxMode']) => {
+    setFormData((prev) => ({
+      ...prev,
+      defaultTaxMode: mode,
+      defaultTaxRate: mode === CATEGORY_TAX_MODE.TAXED ? (prev.defaultTaxRate ?? 0.16) : null,
+    }));
+
+    if (errors.defaultTaxMode || errors.defaultTaxRate) {
+      setErrors((prev) => ({
+        ...prev,
+        defaultTaxMode: undefined,
+        defaultTaxRate: undefined,
+      }));
+    }
   };
 
   const dialogTitle = isEditMode ? 'Editar Categoría' : 'Agregar Categoría';
@@ -180,6 +206,39 @@ export function CategoryDialog({
               onChange={(e) => handleChange('description', e.target.value)}
               disabled={isLoading}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="defaultTaxMode">Modo de impuesto</Label>
+              <select
+                id="defaultTaxMode"
+                className="flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-sm"
+                value={formData.defaultTaxMode}
+                onChange={(e) => handleTaxModeChange(e.target.value as CategoryFormData['defaultTaxMode'])}
+                disabled={isLoading}
+              >
+                <option value={CATEGORY_TAX_MODE.TAXED}>Gravado</option>
+                <option value={CATEGORY_TAX_MODE.EXEMPT}>Exento</option>
+                <option value={CATEGORY_TAX_MODE.NON_TAXABLE}>No gravado</option>
+              </select>
+            </div>
+
+            {formData.defaultTaxMode === CATEGORY_TAX_MODE.TAXED && (
+              <div className="space-y-2">
+                <Label htmlFor="defaultTaxRate">Tasa IVA</Label>
+                <Input
+                  id="defaultTaxRate"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={formData.defaultTaxRate ?? ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, defaultTaxRate: Number(e.target.value) }))}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>

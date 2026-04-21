@@ -50,6 +50,9 @@ describe('use-reports', () => {
       range_start: '2026-04-01T00:00:00Z',
       range_end: '2026-04-30T23:59:59Z',
       summary: {
+        net_revenue: 820,
+        collected_taxes: 180,
+        gross_revenue: 1000,
         total_sales: 1000,
         credit_sales: 300,
         total_collected: 120,
@@ -61,6 +64,9 @@ describe('use-reports', () => {
     });
 
     expect(result.summary.totalSales).toBe(1000);
+    expect(result.summary.netRevenue).toBe(820);
+    expect(result.summary.collectedTaxes).toBe(180);
+    expect(result.summary.grossRevenue).toBe(1000);
     expect(result.summary.creditSales).toBe(300);
     expect(result.summary.activeDebtors).toBe(2);
   });
@@ -244,6 +250,9 @@ describe('use-reports', () => {
         range_start: '2026-04-01T00:00:00Z',
         range_end: '2026-04-30T23:59:59Z',
         summary: {
+          net_revenue: 820,
+          collected_taxes: 180,
+          gross_revenue: 1000,
           total_sales: 1000,
           credit_sales: 300,
           total_collected: 120,

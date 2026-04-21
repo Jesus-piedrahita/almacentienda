@@ -22,8 +22,6 @@ import type {
 // Constantes
 // ---------------------------------------------------------------------------
 
-const TAX_RATE = 0.16; // IVA 16%
-
 const INITIAL_STATE: SalesState = {
   items: [],
   paymentMethod: 'cash',
@@ -200,16 +198,55 @@ export const selectSubtotal = (state: SalesState): number =>
   state.items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
 /**
- * IVA (16%) calculado sobre el subtotal.
+ * IVA calculado por item según tax efectivo.
  */
-export const selectTax = (state: SalesState): number =>
-  selectSubtotal(state) * TAX_RATE;
+export const selectItemTax = (item: CartItem): number => {
+  if (item.product.effectiveTaxMode !== 'taxed') {
+    return 0;
+  }
+
+  return item.product.price * item.quantity * (item.product.effectiveTaxRate ?? 0);
+};
+
+/**
+ * IVA total agregado del carrito.
+ */
+export const selectTaxTotal = (state: SalesState): number =>
+  state.items.reduce((sum, item) => sum + selectItemTax(item), 0);
+
+/**
+ * Indica si todos los items del carrito son non_taxable.
+ */
+export const selectAllItemsNonTaxable = (state: SalesState): boolean =>
+  state.items.length > 0 && state.items.every((item) => item.product.effectiveTaxMode === 'non_taxable');
+
+/**
+ * Tasas efectivas gravadas presentes en el carrito, sin repetir.
+ */
+export const selectAppliedTaxRates = (state: SalesState): number[] => {
+  const uniqueRates = new Set<number>();
+
+  state.items.forEach((item) => {
+    if (item.product.effectiveTaxMode !== 'taxed') {
+      return;
+    }
+
+    const rate = item.product.effectiveTaxRate;
+    if (rate === null || rate === undefined) {
+      return;
+    }
+
+    uniqueRates.add(rate);
+  });
+
+  return Array.from(uniqueRates).sort((a, b) => a - b);
+};
 
 /**
  * Total a cobrar (subtotal + IVA).
  */
 export const selectTotal = (state: SalesState): number =>
-  selectSubtotal(state) + selectTax(state);
+  selectSubtotal(state) + selectTaxTotal(state);
 
 /**
  * Cambio al cliente en modo efectivo.

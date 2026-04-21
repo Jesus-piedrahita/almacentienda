@@ -45,7 +45,9 @@ import {
   useSalesStore,
   selectTotal,
   selectSubtotal,
-  selectTax,
+  selectTaxTotal,
+  selectAllItemsNonTaxable,
+  selectAppliedTaxRates,
   selectChange,
 } from '@/stores/sales-store';
 import type { PaymentMethod } from '@/types/sales';
@@ -120,7 +122,9 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   // Selectores derivados desde el estado completo del store
   const storeState = useSalesStore();
   const subtotal = selectSubtotal(storeState);
-  const tax = selectTax(storeState);
+  const taxTotal = selectTaxTotal(storeState);
+  const allNonTaxable = selectAllItemsNonTaxable(storeState);
+  const appliedTaxRates = selectAppliedTaxRates(storeState);
   const total = selectTotal(storeState);
   const change = selectChange(storeState);
 
@@ -137,6 +141,11 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const isCredit = paymentMethod === 'credit';
   const isTransfer = paymentMethod === 'transfer';
   const { formatAmount, displayCurrency } = useCurrency();
+  const taxGuideLabel = allNonTaxable
+    ? 'IVA (no aplica)'
+    : appliedTaxRates.length === 0
+      ? 'IVA'
+      : `IVA (${appliedTaxRates.map((rate) => `${(rate * 100).toFixed(0)}%`).join(' · ')})`;
 
   const canConfirm =
     processing === 'idle' &&
@@ -264,8 +273,8 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               <span className="tabular-nums">{formatAmount(subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>IVA (16%)</span>
-              <span className="tabular-nums">{formatAmount(tax)}</span>
+              <span>{taxGuideLabel}</span>
+              <span className="tabular-nums">{allNonTaxable ? '—' : formatAmount(taxTotal)}</span>
             </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CreateCategoryInput } from '@/types/inventory';
+import { CATEGORY_TAX_MODE } from '@/types/inventory';
 import { useAddCategory } from '@/hooks/use-inventory';
 
 interface AddCategoryDialogProps {
@@ -50,6 +51,8 @@ export function AddCategoryDialog({
   const [formData, setFormData] = useState<CreateCategoryInput>({
     name: '',
     description: '',
+    defaultTaxMode: CATEGORY_TAX_MODE.TAXED,
+    defaultTaxRate: 0.16,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof CreateCategoryInput, string>>>({});
@@ -69,6 +72,9 @@ export function AddCategoryDialog({
 
     if (!formData.name.trim()) {
       newErrors.name = 'El nombre es requerido';
+    }
+    if (formData.defaultTaxMode === CATEGORY_TAX_MODE.TAXED && (formData.defaultTaxRate ?? 0) < 0) {
+      newErrors.defaultTaxRate = 'La tasa debe ser mayor o igual a 0';
     }
 
     setErrors(newErrors);
@@ -96,6 +102,8 @@ export function AddCategoryDialog({
     setFormData({
       name: '',
       description: '',
+      defaultTaxMode: CATEGORY_TAX_MODE.TAXED,
+      defaultTaxRate: 0.16,
     });
     setErrors({});
   };
@@ -148,6 +156,39 @@ export function AddCategoryDialog({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="defaultTaxMode">Modo de impuesto</Label>
+              <select
+                id="defaultTaxMode"
+                className="flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-sm"
+                value={formData.defaultTaxMode}
+                onChange={(e) => handleTaxModeChange(e.target.value as CreateCategoryInput['defaultTaxMode'])}
+                disabled={isLoading}
+              >
+                <option value={CATEGORY_TAX_MODE.TAXED}>Gravado</option>
+                <option value={CATEGORY_TAX_MODE.EXEMPT}>Exento</option>
+                <option value={CATEGORY_TAX_MODE.NON_TAXABLE}>No gravado</option>
+              </select>
+            </div>
+
+            {formData.defaultTaxMode === CATEGORY_TAX_MODE.TAXED && (
+              <div className="space-y-2">
+                <Label htmlFor="defaultTaxRate">Tasa IVA</Label>
+                <Input
+                  id="defaultTaxRate"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={formData.defaultTaxRate ?? ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, defaultTaxRate: Number(e.target.value) }))}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -173,3 +214,10 @@ export function AddCategoryDialog({
     </Dialog>
   );
 }
+  const handleTaxModeChange = (mode: CreateCategoryInput['defaultTaxMode']) => {
+    setFormData((prev) => ({
+      ...prev,
+      defaultTaxMode: mode,
+      defaultTaxRate: mode === CATEGORY_TAX_MODE.TAXED ? (prev.defaultTaxRate ?? 0.16) : null,
+    }));
+  };

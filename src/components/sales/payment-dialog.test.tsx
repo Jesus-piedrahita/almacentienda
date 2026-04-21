@@ -70,6 +70,10 @@ const mockProduct: Product = {
   cost: 12,
   quantity: 50,
   minStock: 10,
+  taxMode: 'inherit',
+  taxRate: null,
+  effectiveTaxMode: 'taxed',
+  effectiveTaxRate: 0.16,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -82,6 +86,7 @@ const mockApiSaleResponse = {
   state: 'completed' as const,
   payment_method: 'cash' as const,
   subtotal: 18.5,
+  tax_total: 2.96,
   total: 21.46,
   created_at: '2026-04-09T12:00:00Z',
   cancelled_at: null,
@@ -94,6 +99,8 @@ const mockApiSaleResponse = {
       quantity: 1,
       unit_price: 18.5,
       subtotal: 18.5,
+      tax_rate_snapshot: 0.16,
+      tax_amount: 2.96,
     },
   ],
 };
@@ -151,6 +158,12 @@ describe('PaymentDialog', () => {
   it('renderiza el diálogo con título "Cobrar venta"', () => {
     renderDialog();
     expect(screen.getByRole('heading', { name: /cobrar venta/i })).toBeInTheDocument();
+  });
+
+  it('muestra la tasa de IVA aplicada como guía visual', () => {
+    renderDialog();
+
+    expect(screen.getByText(/IVA \(16%\)/i)).toBeInTheDocument();
   });
 
   it('renderiza el botón "Confirmar" habilitado con efectivo y monto suficiente', () => {

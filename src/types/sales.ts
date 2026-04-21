@@ -113,6 +113,8 @@ export interface SaleItem {
   unitPrice: number;
   unitCost: number | null;
   subtotal: number;
+  taxRateSnapshot: number | null;
+  taxAmount: number;
 }
 
 /**
@@ -130,6 +132,7 @@ export interface Sale {
   transferProofUrl: string | null;
   referenceNote: string | null;
   subtotal: number;
+  taxTotal: number;
   total: number;
   createdAt: string;
   cancelledAt: string | null;

@@ -13,6 +13,9 @@ export interface ReportDateRangeFilter {
 }
 
 export interface ReportsOverviewSummary {
+  netRevenue: number;
+  collectedTaxes: number;
+  grossRevenue: number;
   totalSales: number;
   creditSales: number;
   totalCollected: number;

@@ -134,6 +134,9 @@ const reportsOverviewState = {
     rangeStart: '2026-04-01T00:00:00',
     rangeEnd: '2026-04-30T23:59:59',
     summary: {
+      netRevenue: 24137.93,
+      collectedTaxes: 3862.07,
+      grossRevenue: 28000,
       totalSales: 28000,
       creditSales: 9500,
       totalCollected: 21000,

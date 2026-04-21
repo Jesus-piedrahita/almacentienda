@@ -12,6 +12,9 @@ import type {
   InventoryStats,
   CreateProductInput,
   CreateCategoryInput,
+  CategoryTaxMode,
+  ProductTaxMode,
+  EffectiveTaxMode,
   ExpiringProduct,
   LowStockProduct,
   BulkMarkupInput,
@@ -26,6 +29,8 @@ interface ApiCategory {
   id: number;
   name: string;
   description?: string;
+  default_tax_mode: CategoryTaxMode;
+  default_tax_rate?: number | null;
   created_at: string;
   updated_at?: string;
 }
@@ -42,6 +47,10 @@ interface ApiProduct {
   markup_pct?: number | null;
   quantity: number;
   min_stock: number;
+  tax_mode: ProductTaxMode;
+  tax_rate?: number | null;
+  effective_tax_mode: EffectiveTaxMode;
+  effective_tax_rate?: number | null;
   created_at: string;
   updated_at?: string;
   stock_status: 'good' | 'warning' | 'critical';
@@ -119,6 +128,11 @@ function mapApiCategoryToCategory(apiCategory: ApiCategory): Category {
     id: String(apiCategory.id),
     name: apiCategory.name,
     description: apiCategory.description,
+    defaultTaxMode: apiCategory.default_tax_mode,
+    defaultTaxRate:
+      apiCategory.default_tax_rate !== undefined && apiCategory.default_tax_rate !== null
+        ? Number(apiCategory.default_tax_rate)
+        : null,
   };
 }
 
@@ -138,6 +152,16 @@ function mapApiProductToProduct(apiProduct: ApiProduct): Product {
         : undefined,
     quantity: apiProduct.quantity,
     minStock: apiProduct.min_stock,
+    taxMode: apiProduct.tax_mode,
+    taxRate:
+      apiProduct.tax_rate !== undefined && apiProduct.tax_rate !== null
+        ? Number(apiProduct.tax_rate)
+        : null,
+    effectiveTaxMode: apiProduct.effective_tax_mode,
+    effectiveTaxRate:
+      apiProduct.effective_tax_rate !== undefined && apiProduct.effective_tax_rate !== null
+        ? Number(apiProduct.effective_tax_rate)
+        : null,
     expiration_date: apiProduct.expiration_date,
     createdAt: apiProduct.created_at,
     updatedAt: apiProduct.updated_at || apiProduct.created_at,
@@ -348,8 +372,12 @@ export function useAddProduct() {
         ...input,
         category_id: Number(input.categoryId),
         markup_pct: input.markupPct ?? null,
+        tax_mode: input.taxMode,
+        tax_rate: input.taxRate ?? null,
       };
       delete productData.categoryId;
+      delete productData.taxMode;
+      delete productData.taxRate;
       const response = await api.post<ApiProduct>('/api/inventory/products', productData);
       return mapApiProductToProduct(response.data);
     },
@@ -370,9 +398,24 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Product> }): Promise<Product> => {
       const updateData: Record<string, unknown> = { ...updates };
+      if ('minStock' in updates) {
+        updateData.min_stock = updates.minStock;
+        delete updateData.minStock;
+      }
+      if ('expiration_date' in updates) {
+        updateData.expiration_date = updates.expiration_date;
+      }
       if (updates.categoryId) {
         updateData.category_id = Number(updates.categoryId);
         delete updateData.categoryId;
+      }
+      if ('taxMode' in updates) {
+        updateData.tax_mode = updates.taxMode;
+        delete updateData.taxMode;
+      }
+      if ('taxRate' in updates) {
+        updateData.tax_rate = updates.taxRate ?? null;
+        delete updateData.taxRate;
       }
       if ('markupPct' in updates) {
         updateData.markup_pct = updates.markupPct ?? null;
@@ -447,7 +490,14 @@ export function useAddCategory() {
 
   return useMutation({
     mutationFn: async (input: CreateCategoryInput): Promise<Category> => {
-      const response = await api.post<ApiCategory>('/api/inventory/categories', input);
+      const payload = {
+        ...input,
+        default_tax_mode: input.defaultTaxMode,
+        default_tax_rate: input.defaultTaxRate ?? null,
+      };
+      delete payload.defaultTaxMode;
+      delete payload.defaultTaxRate;
+      const response = await api.post<ApiCategory>('/api/inventory/categories', payload);
       return mapApiCategoryToCategory(response.data);
     },
     onSuccess: () => {
@@ -465,9 +515,18 @@ export function useUpdateCategory() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<CreateCategoryInput> }): Promise<Category> => {
+      const payload: Record<string, unknown> = { ...updates };
+      if ('defaultTaxMode' in updates) {
+        payload.default_tax_mode = updates.defaultTaxMode;
+        delete payload.defaultTaxMode;
+      }
+      if ('defaultTaxRate' in updates) {
+        payload.default_tax_rate = updates.defaultTaxRate ?? null;
+        delete payload.defaultTaxRate;
+      }
       const response = await api.patch<ApiCategory>(
         `/api/inventory/categories/${id}`,
-        updates
+        payload
       );
       return mapApiCategoryToCategory(response.data);
     },

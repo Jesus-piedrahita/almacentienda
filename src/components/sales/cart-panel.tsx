@@ -20,9 +20,11 @@ import { Separator } from '@/components/ui/separator';
 import {
   useSalesStore,
   selectSubtotal,
-  selectTax,
+  selectTaxTotal,
   selectTotal,
   selectItemCount,
+  selectAllItemsNonTaxable,
+  selectAppliedTaxRates,
 } from '@/stores/sales-store';
 import { useCurrency } from '@/hooks/use-currency';
 import { CartItemRow } from './cart-item-row';
@@ -58,13 +60,20 @@ export function CartPanel() {
   // Derivados calculados desde el store state
   const storeState = useSalesStore();
   const subtotal = selectSubtotal(storeState);
-  const tax = selectTax(storeState);
+  const taxTotal = selectTaxTotal(storeState);
+  const allNonTaxable = selectAllItemsNonTaxable(storeState);
+  const appliedTaxRates = selectAppliedTaxRates(storeState);
   const total = selectTotal(storeState);
   const itemCount = selectItemCount(storeState);
 
   const { formatAmount } = useCurrency();
 
   const isEmpty = items.length === 0;
+  const taxGuideLabel = allNonTaxable
+    ? 'IVA (no aplica)'
+    : appliedTaxRates.length === 0
+      ? 'IVA'
+      : `IVA (${appliedTaxRates.map((rate) => `${(rate * 100).toFixed(0)}%`).join(' · ')})`;
 
   return (
     <Card className="flex flex-col h-full">
@@ -124,8 +133,8 @@ export function CartPanel() {
               <span className="tabular-nums">{formatAmount(subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>IVA (16%)</span>
-              <span className="tabular-nums">{formatAmount(tax)}</span>
+              <span>{taxGuideLabel}</span>
+              <span className="tabular-nums">{allNonTaxable ? '—' : formatAmount(taxTotal)}</span>
             </div>
             <div className="flex justify-between text-base font-bold">
               <span>Total</span>

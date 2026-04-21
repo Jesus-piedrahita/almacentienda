@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCurrency } from '@/hooks/use-currency';
 import { formatMarkup, markupFromPrice, priceFromMarkup } from '@/lib/markup';
+import { PRODUCT_TAX_MODE } from '@/types/inventory';
 import type { Category, CreateProductInput } from '@/types/inventory';
 import { useAddProduct } from '@/hooks/use-inventory';
 
@@ -63,6 +64,8 @@ export function AddProductDialog({
     markupPct: undefined,
     quantity: 0,
     minStock: 5,
+    taxMode: PRODUCT_TAX_MODE.INHERIT,
+    taxRate: null,
     expiration_date: undefined,
   });
 
@@ -189,6 +192,8 @@ export function AddProductDialog({
       markupPct: undefined,
       quantity: 0,
       minStock: 5,
+      taxMode: PRODUCT_TAX_MODE.INHERIT,
+      taxRate: null,
       expiration_date: undefined,
     });
     setErrors({});
@@ -245,6 +250,46 @@ export function AddProductDialog({
                 <p className="text-xs text-destructive">{errors.name}</p>
               )}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="taxMode">Impuesto del producto</Label>
+              <select
+                id="taxMode"
+                className="flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-sm"
+                value={formData.taxMode}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    taxMode: e.target.value as CreateProductInput['taxMode'],
+                    taxRate: e.target.value === PRODUCT_TAX_MODE.TAXED ? (prev.taxRate ?? 0.16) : null,
+                  }))
+                }
+                disabled={isLoading}
+              >
+                <option value={PRODUCT_TAX_MODE.INHERIT}>Heredar categoría</option>
+                <option value={PRODUCT_TAX_MODE.TAXED}>Gravado</option>
+                <option value={PRODUCT_TAX_MODE.EXEMPT}>Exento</option>
+                <option value={PRODUCT_TAX_MODE.NON_TAXABLE}>No gravado</option>
+              </select>
+            </div>
+
+            {formData.taxMode === PRODUCT_TAX_MODE.TAXED && (
+              <div className="space-y-2">
+                <Label htmlFor="taxRate">Tasa IVA</Label>
+                <Input
+                  id="taxRate"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={formData.taxRate ?? ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, taxRate: Number(e.target.value) }))}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
           </div>
 
           {/* Fila 2: Descripción */}

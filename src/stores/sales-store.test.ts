@@ -14,7 +14,7 @@
  * - clearCart: vaciar carrito y resetear estado de pago
  * - completeSale: reset completo, phase='completed'
  * - resetCheckout: phase='idle', amountReceived=0, items se preservan
- * - selectSubtotal, selectTax, selectTotal: derivados con IVA 16%
+ * - selectSubtotal, selectItemTax, selectTaxTotal, selectTotal: derivados dinámicos
  * - selectChange: cambio al cliente (0 si insuficiente)
  * - selectItemCount: suma de quantities
  */
@@ -23,7 +23,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   useSalesStore,
   selectSubtotal,
-  selectTax,
+  selectItemTax,
+  selectAppliedTaxRates,
+  selectTaxTotal,
   selectTotal,
   selectChange,
   selectItemCount,
@@ -44,6 +46,10 @@ function makeProduct(overrides?: Partial<Product>): Product {
     cost: 6.00,
     quantity: 50,
     minStock: 5,
+    taxMode: 'inherit',
+    taxRate: null,
+    effectiveTaxMode: 'taxed',
+    effectiveTaxRate: 0.16,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
@@ -106,6 +112,57 @@ describe('useSalesStore: addItem', () => {
     const b = items.find((i) => i.product.id === 'prod-2')!;
     expect(a.quantity).toBe(2);
     expect(b.quantity).toBe(1);
+  });
+});
+
+describe('useSalesStore: selectAppliedTaxRates', () => {
+  beforeEach(resetStore);
+
+  it('returns unique sorted effective taxed rates from cart items', () => {
+    useSalesStore.getState().addItem(productA);
+    useSalesStore.getState().addItem(
+      makeProduct({
+        id: 'prod-3',
+        name: 'Producto C',
+        price: 15,
+        effectiveTaxRate: 0.09,
+        effectiveTaxMode: 'taxed',
+      })
+    );
+    useSalesStore.getState().addItem(
+      makeProduct({
+        id: 'prod-4',
+        name: 'Producto D',
+        price: 8,
+        effectiveTaxRate: 0.16,
+        effectiveTaxMode: 'taxed',
+      })
+    );
+
+    const state = useSalesStore.getState();
+    expect(selectAppliedTaxRates(state)).toEqual([0.09, 0.16]);
+  });
+
+  it('ignores exempt and non-taxable items', () => {
+    useSalesStore.getState().addItem(
+      makeProduct({
+        id: 'prod-5',
+        name: 'Producto Exento',
+        effectiveTaxMode: 'exempt',
+        effectiveTaxRate: 0,
+      })
+    );
+    useSalesStore.getState().addItem(
+      makeProduct({
+        id: 'prod-6',
+        name: 'Producto No Gravado',
+        effectiveTaxMode: 'non_taxable',
+        effectiveTaxRate: null,
+      })
+    );
+
+    const state = useSalesStore.getState();
+    expect(selectAppliedTaxRates(state)).toEqual([]);
   });
 });
 
@@ -358,18 +415,32 @@ describe('selectores derivados', () => {
     expect(selectSubtotal(state)).toBeCloseTo(30 + 20); // 50
   });
 
-  it('selectTax: IVA es el 16% del subtotal', () => {
+  it('selectItemTax: calcula impuesto por item', () => {
     useSalesStore.getState().addItem(productA); // subtotal = 10
     const state = useSalesStore.getState();
 
-    expect(selectTax(state)).toBeCloseTo(1.6); // 10 × 0.16
+    expect(selectItemTax(state.items[0])).toBeCloseTo(1.6);
+  });
+
+  it('selectTaxTotal: suma impuestos de carrito mixto', () => {
+    useSalesStore.getState().addItem(productA);
+    useSalesStore.getState().addItem({
+      ...productB,
+      taxMode: 'exempt',
+      taxRate: null,
+      effectiveTaxMode: 'exempt',
+      effectiveTaxRate: 0,
+    });
+    const state = useSalesStore.getState();
+
+    expect(selectTaxTotal(state)).toBeCloseTo(1.6);
   });
 
   it('selectTotal: subtotal + IVA', () => {
     useSalesStore.getState().addItem(productA); // price = 10
     const state = useSalesStore.getState();
 
-    expect(selectTotal(state)).toBeCloseTo(11.6); // 10 + 1.6
+    expect(selectTotal(state)).toBeCloseTo(11.6); // 10 + impuesto dinámico
   });
 
   it('selectChange: devuelve 0 si amountReceived < total', () => {

@@ -87,6 +87,8 @@ const mockApiSaleItem = {
   unit_price: 18.5,
   unit_cost: 11.25,
   subtotal: 37.0,
+  tax_rate_snapshot: 0.16,
+  tax_amount: 5.92,
 };
 
 const mockApiSale = {
@@ -101,6 +103,7 @@ const mockApiSale = {
   transfer_proof_url: null,
   reference_note: null,
   subtotal: 37.0,
+  tax_total: 5.92,
   total: 42.92,
   created_at: '2026-04-09T12:00:00Z',
   cancelled_at: null,
@@ -134,6 +137,7 @@ describe('mapApiSaleToSale', () => {
   it('convierte subtotales Decimal (number) a number', () => {
     const sale = mapApiSaleToSale(mockApiSale);
     expect(sale.subtotal).toBe(37.0);
+    expect(sale.taxTotal).toBe(5.92);
     expect(sale.total).toBe(42.92);
   });
 
@@ -153,6 +157,8 @@ describe('mapApiSaleToSale', () => {
     expect(item.unitPrice).toBe(18.5);
     expect(item.unitCost).toBe(11.25);
     expect(item.subtotal).toBe(37.0);
+    expect(item.taxRateSnapshot).toBe(0.16);
+    expect(item.taxAmount).toBe(5.92);
   });
 
   it('preserva unitCost null sin coerción', () => {

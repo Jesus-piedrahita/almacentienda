@@ -20,6 +20,9 @@ import type {
 } from '@/types/reports';
 
 interface ApiReportsOverviewSummary {
+  net_revenue: number;
+  collected_taxes: number;
+  gross_revenue: number;
   total_sales: number;
   credit_sales: number;
   total_collected: number;
@@ -166,6 +169,9 @@ function buildReportParams(filters: ReportDateRangeFilter): Record<string, strin
 
 function mapApiOverviewSummary(summary: ApiReportsOverviewSummary): ReportsOverviewSummary {
   return {
+    netRevenue: Number(summary.net_revenue),
+    collectedTaxes: Number(summary.collected_taxes),
+    grossRevenue: Number(summary.gross_revenue),
     totalSales: Number(summary.total_sales),
     creditSales: Number(summary.credit_sales),
     totalCollected: Number(summary.total_collected),
