@@ -8,11 +8,13 @@ import api from '@/lib/api';
 import {
   getDefaultReportFilters,
   mapApiCreditCollectionReport,
+  mapApiCommercialClosureReport,
   mapApiProfitByDimensionReport,
   mapApiProductsPerformanceReport,
   mapApiReportsOverview,
   reportsQueryKeys,
   useCreditCollectionReport,
+  useCommercialClosureReport,
   useProfitByDimensionReport,
   useProductsPerformanceReport,
   useReportsOverview,
@@ -243,6 +245,49 @@ describe('use-reports', () => {
     ).toEqual(['reports', 'profit-by-dimension', '2026-04-01', '2026-04-30', 'week']);
   });
 
+  it('builds commercial closure query key by range', () => {
+    expect(
+      reportsQueryKeys.commercialClosure({
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+      })
+    ).toEqual(['reports', 'commercial-closure', '2026-04-01', '2026-04-30']);
+  });
+
+  it('maps commercial closure payload from snake_case to camelCase', () => {
+    const result = mapApiCommercialClosureReport({
+      range_start: '2026-04-01T00:00:00Z',
+      range_end: '2026-04-01T23:59:59Z',
+      sales_summary: {
+        sales_count: 3,
+        units_sold: 8,
+        net_sold: 200,
+        iva_total: 32,
+        gross_sold: 232,
+        average_ticket: 77.33,
+      },
+      collection_summary: {
+        cash_collected: 80,
+        transfer_confirmed_collected: 40,
+        total_effectively_collected: 120,
+        credit_generated: 90,
+        outstanding_balance: 25,
+      },
+      top_products: [
+        {
+          product_id: 12,
+          product_name: 'Arroz',
+          total_units_sold: 6,
+          total_revenue: 120,
+        },
+      ],
+    });
+
+    expect(result.salesSummary.salesCount).toBe(3);
+    expect(result.collectionSummary.totalEffectivelyCollected).toBe(120);
+    expect(result.topProducts[0].productId).toBe('12');
+  });
+
   it('fetches overview report with mapped params', async () => {
     const queryClient = makeQueryClient();
     mockedApiGet.mockResolvedValueOnce({
@@ -429,5 +474,50 @@ describe('use-reports', () => {
       },
     });
     expect(result.current.data?.groupBy).toBe('week');
+  });
+
+  it('fetches commercial closure report with mapped params', async () => {
+    const queryClient = makeQueryClient();
+    mockedApiGet.mockResolvedValueOnce({
+      data: {
+        range_start: '2026-04-01T00:00:00Z',
+        range_end: '2026-04-01T23:59:59Z',
+        sales_summary: {
+          sales_count: 3,
+          units_sold: 8,
+          net_sold: 200,
+          iva_total: 32,
+          gross_sold: 232,
+          average_ticket: 77.33,
+        },
+        collection_summary: {
+          cash_collected: 80,
+          transfer_confirmed_collected: 40,
+          total_effectively_collected: 120,
+          credit_generated: 90,
+          outstanding_balance: 25,
+        },
+        top_products: [],
+      },
+    });
+
+    const { result } = renderHook(
+      () =>
+        useCommercialClosureReport({
+          startDate: '2026-04-01',
+          endDate: '2026-04-01',
+        }),
+      { wrapper: makeWrapper(queryClient) }
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockedApiGet).toHaveBeenCalledWith('/api/reports/commercial-closure', {
+      params: {
+        start: '2026-04-01T00:00:00',
+        end: '2026-04-01T23:59:59',
+      },
+    });
+    expect(result.current.data?.salesSummary.grossSold).toBe(232);
   });
 });

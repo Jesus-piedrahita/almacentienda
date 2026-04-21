@@ -28,7 +28,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { useCreateSale, useSales, useSale, salesQueryKeys, mapApiSaleToSale } from './use-sales';
+import {
+  useCreateSale,
+  useSales,
+  useSale,
+  useSalesFiltered,
+  salesQueryKeys,
+  mapApiSaleToSale,
+} from './use-sales';
 import api from '@/lib/api';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -243,6 +250,16 @@ describe('salesQueryKeys', () => {
 
   it('detail incluye id en la key', () => {
     expect(salesQueryKeys.detail('42')).toEqual(['sales', '42']);
+  });
+
+  it('filtered incluye rango y page en la key', () => {
+    expect(salesQueryKeys.filtered('2026-04-01', '2026-04-30', 2)).toEqual([
+      'sales',
+      'filtered',
+      '2026-04-01',
+      '2026-04-30',
+      2,
+    ]);
   });
 });
 
@@ -477,5 +494,41 @@ describe('useSale', () => {
     });
 
     expect(result.current.fetchStatus).toBe('idle');
+  });
+});
+
+describe('useSalesFiltered', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = makeQueryClient();
+    vi.clearAllMocks();
+  });
+
+  it('llama a GET /api/sales con start/end para filtrar por fechas', async () => {
+    mockedApiGet.mockResolvedValueOnce({ data: mockApiSalesListResponse });
+
+    renderHook(
+      () =>
+        useSalesFiltered({
+          startDate: '2026-04-01',
+          endDate: '2026-04-30',
+          page: 1,
+        }),
+      {
+        wrapper: makeWrapper(queryClient),
+      }
+    );
+
+    await waitFor(() => expect(mockedApiGet).toHaveBeenCalled());
+
+    expect(mockedApiGet).toHaveBeenCalledWith('/api/sales', {
+      params: {
+        page: 1,
+        limit: 20,
+        start: '2026-04-01T00:00:00',
+        end: '2026-04-30T23:59:59',
+      },
+    });
   });
 });

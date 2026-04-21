@@ -9,6 +9,7 @@ import { ClientsPage } from "./pages/clients-page"
 import { SalesPage } from "./pages/sales-page"
 import { SettingsPage } from "./pages/settings-page"
 import { ReportsPage } from "./pages/reports-page"
+import { CommercialClosurePage } from "./pages/commercial-closure-page"
 import { SessionTraceabilityPage } from "./pages/session-traceability-page"
 import { TransfersPage } from "./pages/transfers-page"
 import { MainLayout } from "./components/layout/main-layout"
@@ -83,6 +84,7 @@ function App() {
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/transfers" element={<TransfersPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/commercial-closure" element={<CommercialClosurePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/session-traceability" element={<SessionTraceabilityPage />} />
           </Route>

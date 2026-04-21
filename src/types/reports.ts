@@ -134,3 +134,35 @@ export interface ProfitByDimensionReport {
   series: ProfitBucketPoint[];
   hasIncompleteCostData: boolean;
 }
+
+export interface CommercialClosureSalesSummary {
+  salesCount: number;
+  unitsSold: number;
+  netSold: number;
+  ivaTotal: number;
+  grossSold: number;
+  averageTicket: number;
+}
+
+export interface CommercialClosureCollectionSummary {
+  cashCollected: number;
+  transferConfirmedCollected: number;
+  totalEffectivelyCollected: number;
+  creditGenerated: number;
+  outstandingBalance: number;
+}
+
+export interface CommercialClosureTopProduct {
+  productId: string;
+  productName: string;
+  totalUnitsSold: number;
+  totalRevenue: number;
+}
+
+export interface CommercialClosureReport {
+  rangeStart: string;
+  rangeEnd: string;
+  salesSummary: CommercialClosureSalesSummary;
+  collectionSummary: CommercialClosureCollectionSummary;
+  topProducts: CommercialClosureTopProduct[];
+}

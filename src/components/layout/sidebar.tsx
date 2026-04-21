@@ -9,6 +9,7 @@ import {
   Package,
   ShoppingCart,
   BarChart3,
+  ClipboardList,
   History,
   Settings,
   LogOut,
@@ -55,6 +56,11 @@ const navItems = [
     label: "Reportes",
     href: "/reports",
     icon: BarChart3,
+  },
+  {
+    label: "Cierre Comercial",
+    href: "/commercial-closure",
+    icon: ClipboardList,
   },
   {
     label: "Configuración",

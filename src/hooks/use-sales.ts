@@ -24,6 +24,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { toApiEndDate, toApiStartDate } from '@/lib/date-utils';
 import type { Sale, SalesPagination, CreateSaleInput } from '@/types/sales';
 import { useUploadTransferProof } from '@/hooks/use-transfers';
 import { invalidateOperationalQueries } from '@/lib/query-invalidation';
@@ -137,8 +138,16 @@ export function mapApiSaleToSale(apiSale: ApiSale): Sale {
 export const salesQueryKeys = {
   all: ['sales'] as const,
   list: (page: number) => ['sales', 'list', page] as const,
+  filtered: (startDate: string, endDate: string, page: number) =>
+    ['sales', 'filtered', startDate, endDate, page] as const,
   detail: (id: string) => ['sales', id] as const,
 };
+
+export interface SalesFilteredParams {
+  startDate: string;
+  endDate: string;
+  page?: number;
+}
 
 // ============================================================
 // Mutation: Crear venta
@@ -218,6 +227,35 @@ export function useSales(page: number = 1) {
       };
     },
     staleTime: 1000 * 60 * 2, // 2 minutos
+  });
+}
+
+export function useSalesFiltered(params: SalesFilteredParams) {
+  const page = params.page ?? 1;
+
+  return useQuery({
+    queryKey: salesQueryKeys.filtered(params.startDate, params.endDate, page),
+    queryFn: async (): Promise<{ data: Sale[]; pagination: SalesPagination }> => {
+      const response = await api.get<ApiSalesListResponse>('/api/sales', {
+        params: {
+          page,
+          limit: 20,
+          start: toApiStartDate(params.startDate),
+          end: toApiEndDate(params.endDate),
+        },
+      });
+
+      return {
+        data: response.data.data.map(mapApiSaleToSale),
+        pagination: {
+          page: response.data.pagination.page,
+          limit: response.data.pagination.limit,
+          total: response.data.pagination.total,
+          totalPages: response.data.pagination.total_pages,
+        },
+      };
+    },
+    staleTime: 1000 * 60 * 2,
   });
 }
 

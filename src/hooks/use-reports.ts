@@ -1,7 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 
 import api from '@/lib/api';
+import { toApiEndDate, toApiStartDate } from '@/lib/date-utils';
 import type {
+  CommercialClosureCollectionSummary,
+  CommercialClosureReport,
+  CommercialClosureSalesSummary,
+  CommercialClosureTopProduct,
   CategoryProfitItem,
   CategoryPerformanceItem,
   CreditCollectionPoint,
@@ -142,16 +147,40 @@ interface ApiProfitByDimensionReport {
   has_incomplete_cost_data: boolean;
 }
 
+interface ApiCommercialClosureSalesSummary {
+  sales_count: number;
+  units_sold: number;
+  net_sold: number;
+  iva_total: number;
+  gross_sold: number;
+  average_ticket: number;
+}
+
+interface ApiCommercialClosureCollectionSummary {
+  cash_collected: number;
+  transfer_confirmed_collected: number;
+  total_effectively_collected: number;
+  credit_generated: number;
+  outstanding_balance: number;
+}
+
+interface ApiCommercialClosureTopProduct {
+  product_id: number;
+  product_name: string;
+  total_units_sold: number;
+  total_revenue: number;
+}
+
+interface ApiCommercialClosureResponse {
+  range_start: string;
+  range_end: string;
+  sales_summary: ApiCommercialClosureSalesSummary;
+  collection_summary: ApiCommercialClosureCollectionSummary;
+  top_products: ApiCommercialClosureTopProduct[];
+}
+
 function formatDateInput(date: Date): string {
   return date.toISOString().slice(0, 10);
-}
-
-function toApiStartDate(date: string): string {
-  return `${date}T00:00:00`;
-}
-
-function toApiEndDate(date: string): string {
-  return `${date}T23:59:59`;
 }
 
 function buildReportParams(filters: ReportDateRangeFilter): Record<string, string> {
@@ -291,6 +320,56 @@ function mapApiProfitBucketPoint(item: ApiProfitBucketPoint): ProfitBucketPoint 
   };
 }
 
+function mapApiCommercialClosureSalesSummary(
+  summary: ApiCommercialClosureSalesSummary
+): CommercialClosureSalesSummary {
+  return {
+    salesCount: summary.sales_count,
+    unitsSold: summary.units_sold,
+    netSold: Number(summary.net_sold),
+    ivaTotal: Number(summary.iva_total),
+    grossSold: Number(summary.gross_sold),
+    averageTicket: Number(summary.average_ticket),
+  };
+}
+
+function mapApiCommercialClosureCollectionSummary(
+  summary: ApiCommercialClosureCollectionSummary
+): CommercialClosureCollectionSummary {
+  return {
+    cashCollected: Number(summary.cash_collected),
+    transferConfirmedCollected: Number(summary.transfer_confirmed_collected),
+    totalEffectivelyCollected: Number(summary.total_effectively_collected),
+    creditGenerated: Number(summary.credit_generated),
+    outstandingBalance: Number(summary.outstanding_balance),
+  };
+}
+
+function mapApiCommercialClosureTopProduct(
+  item: ApiCommercialClosureTopProduct
+): CommercialClosureTopProduct {
+  return {
+    productId: String(item.product_id),
+    productName: item.product_name,
+    totalUnitsSold: item.total_units_sold,
+    totalRevenue: Number(item.total_revenue),
+  };
+}
+
+export function mapApiCommercialClosureReport(
+  apiReport: ApiCommercialClosureResponse
+): CommercialClosureReport {
+  return {
+    rangeStart: apiReport.range_start,
+    rangeEnd: apiReport.range_end,
+    salesSummary: mapApiCommercialClosureSalesSummary(apiReport.sales_summary),
+    collectionSummary: mapApiCommercialClosureCollectionSummary(
+      apiReport.collection_summary
+    ),
+    topProducts: apiReport.top_products.map(mapApiCommercialClosureTopProduct),
+  };
+}
+
 export function mapApiProductsPerformanceReport(apiReport: ApiProductsPerformanceReport): ProductsPerformanceReport {
   return {
     rangeStart: apiReport.range_start,
@@ -327,6 +406,8 @@ export const reportsQueryKeys = {
     filters.groupBy ?? 'auto',
   ] as const,
   productsPerformance: (filters: ReportDateRangeFilter) => ['reports', 'products-performance', filters.startDate, filters.endDate] as const,
+  commercialClosure: (filters: ReportDateRangeFilter) =>
+    ['reports', 'commercial-closure', filters.startDate, filters.endDate] as const,
   profitByDimension: (filters: ReportDateRangeFilter) => [
     'reports',
     'profit-by-dimension',
@@ -382,6 +463,25 @@ export function useProductsPerformanceReport(filters: ReportDateRangeFilter) {
         params: buildReportParams(filters),
       });
       return mapApiProductsPerformanceReport(response.data);
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useCommercialClosureReport(filters: ReportDateRangeFilter) {
+  return useQuery({
+    queryKey: reportsQueryKeys.commercialClosure(filters),
+    queryFn: async (): Promise<CommercialClosureReport> => {
+      const response = await api.get<ApiCommercialClosureResponse>(
+        '/api/reports/commercial-closure',
+        {
+          params: {
+            start: toApiStartDate(filters.startDate),
+            end: toApiEndDate(filters.endDate),
+          },
+        }
+      );
+      return mapApiCommercialClosureReport(response.data);
     },
     staleTime: 1000 * 60 * 2,
   });

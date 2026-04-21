@@ -17,6 +17,7 @@
 
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi, describe, it, expect } from 'vitest';
 import { Sidebar } from '@/components/layout/sidebar';
 
@@ -40,13 +41,28 @@ vi.mock('@/stores/auth-store', () => ({
   },
 }));
 
+vi.mock('@/hooks/use-auth', () => ({
+  useLogout: () => ({
+    mutateAsync: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function renderSidebar(initialPath = '/') {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Sidebar />
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Sidebar />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -97,6 +113,7 @@ describe('Sidebar navigation — /sales route regression', () => {
     expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /inventario/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /reportes/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /cierre comercial/i })).toBeInTheDocument();
   });
 
   it('renders the user email in the sidebar footer', () => {
