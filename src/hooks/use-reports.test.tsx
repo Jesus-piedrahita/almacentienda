@@ -9,12 +9,14 @@ import {
   getDefaultReportFilters,
   mapApiCreditCollectionReport,
   mapApiCommercialClosureReport,
+  mapApiInventoryInvestment,
   mapApiProfitByDimensionReport,
   mapApiProductsPerformanceReport,
   mapApiReportsOverview,
   reportsQueryKeys,
   useCreditCollectionReport,
   useCommercialClosureReport,
+  useInventoryInvestment,
   useProfitByDimensionReport,
   useProductsPerformanceReport,
   useReportsOverview,
@@ -288,6 +290,67 @@ describe('use-reports', () => {
     expect(result.topProducts[0].productId).toBe('12');
   });
 
+  it('maps inventory investment payload from snake_case to camelCase', () => {
+    const result = mapApiInventoryInvestment({
+      generated_at: '2026-04-23T10:00:00Z',
+      summary: {
+        total_investment_at_cost: 300,
+        total_products: 2,
+        total_quantity: 15,
+      },
+      by_category: [
+        {
+          category_id: 10,
+          category_name: 'Despensa',
+          product_count: 2,
+          total_quantity: 15,
+          investment_at_cost: 300,
+        },
+      ],
+      by_product: [
+        {
+          product_id: 1,
+          product_name: 'Arroz',
+          barcode: '7501',
+          category_name: 'Despensa',
+          quantity: 15,
+          unit_cost: 20,
+          investment_at_cost: 300,
+        },
+      ],
+      period: 'week',
+      period_start: '2026-04-20T00:00:00Z',
+      period_end: '2026-04-23T23:59:59Z',
+      series: [
+        {
+          bucket_label: '21 Apr',
+          bucket_start: '2026-04-21T00:00:00Z',
+          total_invested: 120,
+          entries_count: 1,
+        },
+      ],
+      entries: [
+        {
+          entry_id: 1,
+          product_id: 1,
+          product_name: 'Arroz',
+          category_name: 'Despensa',
+          quantity_added: 6,
+          unit_cost: 20,
+          total_cost: 120,
+          entered_at: '2026-04-21T10:00:00Z',
+          source: 'migration_opening',
+        },
+      ],
+    });
+
+    expect(result.summary.totalInvestmentAtCost).toBe(300);
+    expect(result.byCategory[0].categoryId).toBe('10');
+    expect(result.byProduct[0].productId).toBe('1');
+    expect(result.series?.[0].entriesCount).toBe(1);
+    expect(result.entries?.[0].source).toBe('migration_opening');
+  });
+
   it('fetches overview report with mapped params', async () => {
     const queryClient = makeQueryClient();
     mockedApiGet.mockResolvedValueOnce({
@@ -519,5 +582,64 @@ describe('use-reports', () => {
       },
     });
     expect(result.current.data?.salesSummary.grossSold).toBe(232);
+  });
+
+  it('fetches inventory investment snapshot by default', async () => {
+    const queryClient = makeQueryClient();
+    mockedApiGet.mockResolvedValueOnce({
+      data: {
+        generated_at: '2026-04-23T10:00:00Z',
+        summary: {
+          total_investment_at_cost: 300,
+          total_products: 2,
+          total_quantity: 15,
+        },
+        by_category: [],
+        by_product: [],
+      },
+    });
+
+    const { result } = renderHook(() => useInventoryInvestment(), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockedApiGet).toHaveBeenCalledWith('/api/reports/inventory-investment', {
+      params: undefined,
+    });
+    expect(result.current.data?.summary.totalProducts).toBe(2);
+  });
+
+  it('fetches inventory investment history with selected period', async () => {
+    const queryClient = makeQueryClient();
+    mockedApiGet.mockResolvedValueOnce({
+      data: {
+        generated_at: '2026-04-23T10:00:00Z',
+        summary: {
+          total_investment_at_cost: 300,
+          total_products: 2,
+          total_quantity: 15,
+        },
+        by_category: [],
+        by_product: [],
+        period: 'week',
+        period_start: '2026-04-20T00:00:00Z',
+        period_end: '2026-04-23T23:59:59Z',
+        series: [],
+        entries: [],
+      },
+    });
+
+    const { result } = renderHook(() => useInventoryInvestment('week'), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockedApiGet).toHaveBeenCalledWith('/api/reports/inventory-investment', {
+      params: { period: 'week' },
+    });
+    expect(result.current.data?.period).toBe('week');
   });
 });

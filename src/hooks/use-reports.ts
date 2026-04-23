@@ -17,6 +17,12 @@ import type {
   ProductPerformanceItem,
   ProductProfitItem,
   ProductsPerformanceReport,
+  InventoryInvestment,
+  InventoryInvestmentCategoryItem,
+  InventoryInvestmentEntry,
+  InventoryInvestmentPeriodBucket,
+  InventoryInvestmentProductItem,
+  InvestmentPeriod,
   ReportDateRangeFilter,
   ReportGroupBy,
   ReportsOverview,
@@ -177,6 +183,61 @@ interface ApiCommercialClosureResponse {
   sales_summary: ApiCommercialClosureSalesSummary;
   collection_summary: ApiCommercialClosureCollectionSummary;
   top_products: ApiCommercialClosureTopProduct[];
+}
+
+interface ApiInventoryInvestmentProductItem {
+  product_id: number;
+  product_name: string;
+  barcode: string;
+  category_name: string;
+  quantity: number;
+  unit_cost: number;
+  investment_at_cost: number;
+}
+
+interface ApiInventoryInvestmentCategoryItem {
+  category_id: number;
+  category_name: string;
+  product_count: number;
+  total_quantity: number;
+  investment_at_cost: number;
+}
+
+interface ApiInventoryInvestmentSummary {
+  total_investment_at_cost: number;
+  total_products: number;
+  total_quantity: number;
+}
+
+interface ApiInventoryInvestmentEntry {
+  entry_id: number;
+  product_id: number;
+  product_name: string;
+  category_name: string;
+  quantity_added: number;
+  unit_cost: number;
+  total_cost: number;
+  entered_at: string;
+  source: string;
+}
+
+interface ApiInventoryInvestmentPeriodBucket {
+  bucket_label: string;
+  bucket_start: string;
+  total_invested: number;
+  entries_count: number;
+}
+
+interface ApiInventoryInvestment {
+  generated_at: string;
+  summary: ApiInventoryInvestmentSummary;
+  by_category: ApiInventoryInvestmentCategoryItem[];
+  by_product: ApiInventoryInvestmentProductItem[];
+  period?: InvestmentPeriod;
+  period_start?: string;
+  period_end?: string;
+  series?: ApiInventoryInvestmentPeriodBucket[];
+  entries?: ApiInventoryInvestmentEntry[];
 }
 
 function formatDateInput(date: Date): string {
@@ -356,6 +417,75 @@ function mapApiCommercialClosureTopProduct(
   };
 }
 
+function mapApiInventoryInvestmentProductItem(
+  item: ApiInventoryInvestmentProductItem
+): InventoryInvestmentProductItem {
+  return {
+    productId: String(item.product_id),
+    productName: item.product_name,
+    barcode: item.barcode,
+    categoryName: item.category_name,
+    quantity: item.quantity,
+    unitCost: Number(item.unit_cost),
+    investmentAtCost: Number(item.investment_at_cost),
+  };
+}
+
+function mapApiInventoryInvestmentCategoryItem(
+  item: ApiInventoryInvestmentCategoryItem
+): InventoryInvestmentCategoryItem {
+  return {
+    categoryId: String(item.category_id),
+    categoryName: item.category_name,
+    productCount: item.product_count,
+    totalQuantity: item.total_quantity,
+    investmentAtCost: Number(item.investment_at_cost),
+  };
+}
+
+function mapApiInventoryInvestmentEntry(item: ApiInventoryInvestmentEntry): InventoryInvestmentEntry {
+  return {
+    entryId: String(item.entry_id),
+    productId: String(item.product_id),
+    productName: item.product_name,
+    categoryName: item.category_name,
+    quantityAdded: item.quantity_added,
+    unitCost: Number(item.unit_cost),
+    totalCost: Number(item.total_cost),
+    enteredAt: item.entered_at,
+    source: item.source,
+  };
+}
+
+function mapApiInventoryInvestmentPeriodBucket(
+  item: ApiInventoryInvestmentPeriodBucket
+): InventoryInvestmentPeriodBucket {
+  return {
+    bucketLabel: item.bucket_label,
+    bucketStart: item.bucket_start,
+    totalInvested: Number(item.total_invested),
+    entriesCount: item.entries_count,
+  };
+}
+
+export function mapApiInventoryInvestment(apiReport: ApiInventoryInvestment): InventoryInvestment {
+  return {
+    generatedAt: apiReport.generated_at,
+    summary: {
+      totalInvestmentAtCost: Number(apiReport.summary.total_investment_at_cost),
+      totalProducts: apiReport.summary.total_products,
+      totalQuantity: apiReport.summary.total_quantity,
+    },
+    byCategory: apiReport.by_category.map(mapApiInventoryInvestmentCategoryItem),
+    byProduct: apiReport.by_product.map(mapApiInventoryInvestmentProductItem),
+    period: apiReport.period,
+    periodStart: apiReport.period_start,
+    periodEnd: apiReport.period_end,
+    series: apiReport.series?.map(mapApiInventoryInvestmentPeriodBucket),
+    entries: apiReport.entries?.map(mapApiInventoryInvestmentEntry),
+  };
+}
+
 export function mapApiCommercialClosureReport(
   apiReport: ApiCommercialClosureResponse
 ): CommercialClosureReport {
@@ -414,6 +544,11 @@ export const reportsQueryKeys = {
     filters.startDate,
     filters.endDate,
     filters.groupBy ?? 'auto',
+  ] as const,
+  inventoryInvestment: (period: InvestmentPeriod | undefined) => [
+    'reports',
+    'inventory-investment',
+    period ?? 'snapshot',
   ] as const,
 };
 
@@ -498,5 +633,18 @@ export function useProfitByDimensionReport(filters: ReportDateRangeFilter, enabl
     },
     staleTime: 1000 * 60 * 2,
     enabled,
+  });
+}
+
+export function useInventoryInvestment(period?: InvestmentPeriod) {
+  return useQuery({
+    queryKey: reportsQueryKeys.inventoryInvestment(period),
+    queryFn: async (): Promise<InventoryInvestment> => {
+      const response = await api.get<ApiInventoryInvestment>('/api/reports/inventory-investment', {
+        params: period ? { period } : undefined,
+      });
+      return mapApiInventoryInvestment(response.data);
+    },
+    staleTime: 1000 * 60 * 2,
   });
 }

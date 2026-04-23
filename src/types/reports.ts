@@ -4,7 +4,15 @@ export const REPORT_GROUP_BY = {
   MONTH: 'month',
 } as const;
 
+export const INVESTMENT_PERIOD = {
+  TODAY: 'today',
+  WEEK: 'week',
+  BIWEEKLY: 'biweekly',
+  MONTH: 'month',
+} as const;
+
 export type ReportGroupBy = (typeof REPORT_GROUP_BY)[keyof typeof REPORT_GROUP_BY];
+export type InvestmentPeriod = (typeof INVESTMENT_PERIOD)[keyof typeof INVESTMENT_PERIOD];
 
 export interface ReportDateRangeFilter {
   startDate: string;
@@ -165,4 +173,59 @@ export interface CommercialClosureReport {
   salesSummary: CommercialClosureSalesSummary;
   collectionSummary: CommercialClosureCollectionSummary;
   topProducts: CommercialClosureTopProduct[];
+}
+
+export interface InventoryInvestmentProductItem {
+  productId: string;
+  productName: string;
+  barcode: string;
+  categoryName: string;
+  quantity: number;
+  unitCost: number;
+  investmentAtCost: number;
+}
+
+export interface InventoryInvestmentCategoryItem {
+  categoryId: string;
+  categoryName: string;
+  productCount: number;
+  totalQuantity: number;
+  investmentAtCost: number;
+}
+
+export interface InventoryInvestmentSummary {
+  totalInvestmentAtCost: number;
+  totalProducts: number;
+  totalQuantity: number;
+}
+
+export interface InventoryInvestmentEntry {
+  entryId: string;
+  productId: string;
+  productName: string;
+  categoryName: string;
+  quantityAdded: number;
+  unitCost: number;
+  totalCost: number;
+  enteredAt: string;
+  source: 'product_create' | 'product_update' | 'migration_opening' | string;
+}
+
+export interface InventoryInvestmentPeriodBucket {
+  bucketLabel: string;
+  bucketStart: string;
+  totalInvested: number;
+  entriesCount: number;
+}
+
+export interface InventoryInvestment {
+  generatedAt: string;
+  summary: InventoryInvestmentSummary;
+  byCategory: InventoryInvestmentCategoryItem[];
+  byProduct: InventoryInvestmentProductItem[];
+  period?: InvestmentPeriod;
+  periodStart?: string;
+  periodEnd?: string;
+  series?: InventoryInvestmentPeriodBucket[];
+  entries?: InventoryInvestmentEntry[];
 }

@@ -7,6 +7,7 @@ import { Link, useLocation } from "react-router";
 import {
   LayoutDashboard,
   Package,
+  Coins,
   ShoppingCart,
   BarChart3,
   ClipboardList,
@@ -36,6 +37,11 @@ const navItems = [
     label: "Inventario",
     href: "/inventory",
     icon: Package,
+  },
+  {
+    label: "Inversión en inventario",
+    href: "/inventory-investment",
+    icon: Coins,
   },
   {
     label: "Clientes",

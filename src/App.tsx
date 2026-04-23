@@ -12,6 +12,7 @@ import { ReportsPage } from "./pages/reports-page"
 import { CommercialClosurePage } from "./pages/commercial-closure-page"
 import { SessionTraceabilityPage } from "./pages/session-traceability-page"
 import { TransfersPage } from "./pages/transfers-page"
+import { InventoryInvestmentPage } from "./pages/inventory-investment-page"
 import { MainLayout } from "./components/layout/main-layout"
 import { AuthInitializingShell } from "./components/auth/auth-initializing-shell"
 import { ProtectedRoute } from "./components/auth/protected-route"
@@ -80,6 +81,7 @@ function App() {
           >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/inventory-investment" element={<InventoryInvestmentPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/transfers" element={<TransfersPage />} />
