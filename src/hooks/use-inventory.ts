@@ -153,6 +153,7 @@ function mapApiProductToProduct(apiProduct: ApiProduct): Product {
         : undefined,
     quantity: apiProduct.quantity,
     minStock: apiProduct.min_stock,
+    stockStatus: apiProduct.stock_status,
     taxMode: apiProduct.tax_mode,
     taxRate:
       apiProduct.tax_rate !== undefined && apiProduct.tax_rate !== null
@@ -163,7 +164,7 @@ function mapApiProductToProduct(apiProduct: ApiProduct): Product {
       apiProduct.effective_tax_rate !== undefined && apiProduct.effective_tax_rate !== null
         ? Number(apiProduct.effective_tax_rate)
         : null,
-    expiration_date: apiProduct.expiration_date,
+    expirationDate: apiProduct.expiration_date,
     createdAt: apiProduct.created_at,
     updatedAt: apiProduct.updated_at || apiProduct.created_at,
   };
@@ -173,8 +174,8 @@ function mapApiExpiringProductToExpiringProduct(api: ApiExpiringProduct): Expiri
   return {
     id: String(api.id),
     name: api.name,
-    expiration_date: api.expiration_date,
-    days_remaining: api.days_remaining,
+    expirationDate: api.expiration_date,
+    daysRemaining: api.days_remaining,
     quantity: api.quantity,
   };
 }
@@ -375,10 +376,12 @@ export function useAddProduct() {
         markup_pct: input.markupPct ?? null,
         tax_mode: input.taxMode,
         tax_rate: input.taxRate ?? null,
+        expiration_date: input.expirationDate,
       };
       delete productData.categoryId;
       delete productData.taxMode;
       delete productData.taxRate;
+      delete productData.expirationDate;
       const response = await api.post<ApiProduct>('/api/inventory/products', productData);
       return mapApiProductToProduct(response.data);
     },
@@ -408,8 +411,9 @@ export function useUpdateProduct() {
         updateData.min_stock = updates.minStock;
         delete updateData.minStock;
       }
-      if ('expiration_date' in updates) {
-        updateData.expiration_date = updates.expiration_date;
+      if ('expirationDate' in updates) {
+        updateData.expiration_date = updates.expirationDate;
+        delete updateData.expirationDate;
       }
       if (updates.categoryId) {
         updateData.category_id = Number(updates.categoryId);

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Tarjeta de productos con fecha de vencimiento.
  * Muestra una lista compacta simple y mock-friendly de productos que traen
- * `expiration_date` desde el backend.
+ * `expirationDate` en el dominio frontend.
  */
 
 import { Clock } from 'lucide-react';
@@ -61,7 +61,7 @@ export function ExpiringProductsCard({ products }: ExpiringProductsCardProps) {
       <CardContent>
         <ul className="space-y-2" role="list" aria-label="Productos con fecha de vencimiento">
           {products.map((product) => {
-            const status = getExpirationDisplayStatus(product.expiration_date);
+            const status = getExpirationDisplayStatus(product.expirationDate);
             const colorClasses = getExpirationDisplayStatusColor(status);
 
             return (
@@ -73,7 +73,7 @@ export function ExpiringProductsCard({ products }: ExpiringProductsCardProps) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{product.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    Vence el {formatDate(product.expiration_date)} · {product.quantity} unidad{product.quantity !== 1 ? 'es' : ''} en stock
+                    Vence el {formatDate(product.expirationDate)} · {product.quantity} unidad{product.quantity !== 1 ? 'es' : ''} en stock
                   </p>
                 </div>
 

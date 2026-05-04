@@ -33,7 +33,7 @@ interface ClientDetailsDialogProps {
  * - Información del cliente
  * - Lista de productos fiados pendientes
  * - Total de deuda
- * - Opción de marcar deuda como pagada
+ * - Opción legacy de marcar deuda como pagada
  *
  * @example
  * ```tsx
@@ -56,7 +56,7 @@ export function ClientDetailsDialog({
 
   const handleMarkPaid = async (debtId: string) => {
     try {
-      await markDebtPaidMutation.mutateAsync(debtId);
+      await markDebtPaidMutation.mutateAsync({ debtId, clientId: clientData.id });
       // El query se invalidará automáticamente
     } catch (error) {
       console.error('Error al marcar deuda como pagada:', error);

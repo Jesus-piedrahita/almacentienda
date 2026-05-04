@@ -407,7 +407,10 @@ export function useDeleteClient() {
 }
 
 /**
- * Hook para marcar una deuda como pagada
+ * Hook para marcar una deuda legacy como pagada.
+ *
+ * Mantiene el shortcut retrocompatible del diálogo legacy de clientes.
+ * El flujo preferido para cuenta corriente es registrar abonos.
  */
 export function useMarkDebtPaid() {
   const queryClient = useQueryClient();

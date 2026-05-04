@@ -1,11 +1,11 @@
 /**
- * @fileoverview Tests de integración para EditProductDialog — campo expiration_date.
+ * @fileoverview Tests de integración para EditProductDialog — campo expirationDate.
  *
  * Verifica (REQ-3 / SCENARIO-5):
- * 1. El formulario se pre-carga con la expiration_date del producto recibido.
- * 2. El payload de submit incluye la expiration_date pre-cargada.
- * 3. El payload de submit incluye una nueva expiration_date si el usuario la cambia.
- * 4. El payload de submit tiene expiration_date: undefined cuando el campo se vacía.
+ * 1. El formulario se pre-carga con la expirationDate del producto recibido.
+ * 2. El payload de submit incluye la expirationDate pre-cargada.
+ * 3. El payload de submit incluye una nueva expirationDate si el usuario la cambia.
+ * 4. El payload de submit tiene expirationDate: undefined cuando el campo se vacía.
  *
  * Estrategia:
  * - `useUpdateProduct` se mockea con `vi.mock` para capturar el payload sin peticiones HTTP.
@@ -87,7 +87,7 @@ function renderDialog(product: Product, open = true, onOpenChange = vi.fn()) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('EditProductDialog — expiration_date en el payload de submit', () => {
+describe('EditProductDialog — expirationDate en el payload de submit', () => {
   const mockMutateAsync = vi.fn();
 
   beforeEach(() => {
@@ -99,17 +99,17 @@ describe('EditProductDialog — expiration_date en el payload de submit', () => 
     mockMutateAsync.mockResolvedValue(undefined);
   });
 
-  it('pre-carga el campo de fecha con la expiration_date del producto', () => {
-    const product = makeProduct({ expiration_date: '2026-09-15' });
+  it('pre-carga el campo de fecha con la expirationDate del producto', () => {
+    const product = makeProduct({ expirationDate: '2026-09-15' });
     renderDialog(product);
 
     const dateInput = screen.getByLabelText(/Fecha de Vencimiento/i) as HTMLInputElement;
     expect(dateInput.value).toBe('2026-09-15');
   });
 
-  it('incluye expiration_date pre-cargada en el payload de submit sin cambios', async () => {
+  it('incluye expirationDate pre-cargada en el payload de submit sin cambios', async () => {
     const user = userEvent.setup();
-    const product = makeProduct({ expiration_date: '2026-09-15' });
+    const product = makeProduct({ expirationDate: '2026-09-15' });
     renderDialog(product);
 
     // Enviar sin modificar la fecha
@@ -117,12 +117,12 @@ describe('EditProductDialog — expiration_date en el payload de submit', () => 
 
     expect(mockMutateAsync).toHaveBeenCalledOnce();
     const { updates } = mockMutateAsync.mock.calls[0][0];
-    expect(updates.expiration_date).toBe('2026-09-15');
+    expect(updates.expirationDate).toBe('2026-09-15');
   });
 
-  it('incluye la nueva expiration_date en el payload cuando el usuario la cambia', async () => {
+  it('incluye la nueva expirationDate en el payload cuando el usuario la cambia', async () => {
     const user = userEvent.setup();
-    const product = makeProduct({ expiration_date: '2026-09-15' });
+    const product = makeProduct({ expirationDate: '2026-09-15' });
     renderDialog(product);
 
     // Limpiar y escribir nueva fecha
@@ -134,12 +134,12 @@ describe('EditProductDialog — expiration_date en el payload de submit', () => 
 
     expect(mockMutateAsync).toHaveBeenCalledOnce();
     const { updates } = mockMutateAsync.mock.calls[0][0];
-    expect(updates.expiration_date).toBe('2027-03-01');
+    expect(updates.expirationDate).toBe('2027-03-01');
   });
 
-  it('envía expiration_date como undefined cuando se vacía el campo', async () => {
+  it('envía expirationDate como undefined cuando se vacía el campo', async () => {
     const user = userEvent.setup();
-    const product = makeProduct({ expiration_date: '2026-09-15' });
+    const product = makeProduct({ expirationDate: '2026-09-15' });
     renderDialog(product);
 
     // Limpiar el campo de fecha
@@ -151,11 +151,11 @@ describe('EditProductDialog — expiration_date en el payload de submit', () => 
     expect(mockMutateAsync).toHaveBeenCalledOnce();
     const { updates } = mockMutateAsync.mock.calls[0][0];
     // Campo vacío → debe normalizarse a undefined
-    expect(updates.expiration_date).toBeUndefined();
+    expect(updates.expirationDate).toBeUndefined();
   });
 
-  it('el campo de fecha está vacío si el producto no tiene expiration_date', () => {
-    const product = makeProduct({ expiration_date: undefined });
+  it('el campo de fecha está vacío si el producto no tiene expirationDate', () => {
+    const product = makeProduct({ expirationDate: undefined });
     renderDialog(product);
 
     const dateInput = screen.getByLabelText(/Fecha de Vencimiento/i) as HTMLInputElement;

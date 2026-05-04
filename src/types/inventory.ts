@@ -69,12 +69,13 @@ export interface Product {
   markupPct?: number;
   quantity: number;
   minStock: number; // Stock mínimo para alerta
+  stockStatus?: StockStatus;
   taxMode: ProductTaxMode;
   taxRate: number | null;
   effectiveTaxMode: EffectiveTaxMode;
   effectiveTaxRate: number | null;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
-  expiration_date?: string;
+  expirationDate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,7 +122,7 @@ export interface CreateProductInput {
   taxMode: ProductTaxMode;
   taxRate?: number | null;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
-  expiration_date?: string;
+  expirationDate?: string;
 }
 
 /**
@@ -140,7 +141,7 @@ export interface UpdateProductInput {
   taxMode?: ProductTaxMode;
   taxRate?: number | null;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). Opcional. */
-  expiration_date?: string;
+  expirationDate?: string;
 }
 
 export type BulkMarkupScope = 'selected' | 'category' | 'all';
@@ -263,9 +264,9 @@ export interface ExpiringProduct {
   id: string;
   name: string;
   /** Fecha de vencimiento en formato ISO-8601 (YYYY-MM-DD). */
-  expiration_date: string;
+  expirationDate: string;
   /** Días restantes hasta el vencimiento (negativo si ya venció). */
-  days_remaining: number;
+  daysRemaining: number;
   quantity: number;
 }
 

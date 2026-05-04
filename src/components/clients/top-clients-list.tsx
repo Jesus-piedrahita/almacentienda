@@ -22,7 +22,7 @@ interface TopClientsListProps {
  * - Posición
  * - Nombre del cliente
  * - Total de deuda
- * - Número de productos fiados
+ * - Número de ventas fiadas
  *
  * @example
  * ```tsx
@@ -82,7 +82,7 @@ export function TopClientsList({
             <div>
               <p className="font-medium">{client.name}</p>
               <p className="text-xs text-muted-foreground">
-                {client.debtCount} producto{client.debtCount !== 1 ? 's' : ''} fiado{client.debtCount !== 1 ? 's' : ''}
+                {client.debtCount} venta{client.debtCount !== 1 ? 's' : ''} fiada{client.debtCount !== 1 ? 's' : ''}
               </p>
             </div>
           </div>

@@ -1,7 +1,7 @@
 /**
- * @fileoverview Tests unitarios para mapApiProductToProduct — campo expiration_date.
+ * @fileoverview Tests unitarios para mapApiProductToProduct — campo expirationDate.
  *
- * Verifica que el mapper pase correctamente el campo opcional `expiration_date`
+ * Verifica que el mapper pase correctamente el campo opcional `expirationDate`
  * desde el payload de la API hasta el tipo `Product` del dominio.
  *
  * Estrategia: Se usa `useSearchProducts` como proxy público del mapper porque
@@ -61,9 +61,9 @@ const baseApiProduct = {
   stock_status: 'good' as const,
 };
 
-// ── Tests: mapApiProductToProduct — expiration_date ───────────────────────────
+// ── Tests: mapApiProductToProduct — expirationDate ───────────────────────────
 
-describe('mapApiProductToProduct — campo expiration_date', () => {
+describe('mapApiProductToProduct — campo expirationDate', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -71,7 +71,7 @@ describe('mapApiProductToProduct — campo expiration_date', () => {
     vi.clearAllMocks();
   });
 
-  it('incluye expiration_date en el producto mapeado cuando la API lo devuelve', async () => {
+  it('incluye expirationDate en el producto mapeado cuando la API lo devuelve', async () => {
     const apiProductWithDate = {
       ...baseApiProduct,
       expiration_date: '2026-09-30',
@@ -86,10 +86,10 @@ describe('mapApiProductToProduct — campo expiration_date', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const [product] = result.current.data!;
-    expect(product.expiration_date).toBe('2026-09-30');
+    expect(product.expirationDate).toBe('2026-09-30');
   });
 
-  it('deja expiration_date como undefined cuando la API no lo devuelve', async () => {
+  it('deja expirationDate como undefined cuando la API no lo devuelve', async () => {
     // Sin campo expiration_date en el objeto de la API
     mockedApiGet.mockResolvedValueOnce({ data: [baseApiProduct] });
 
@@ -101,10 +101,10 @@ describe('mapApiProductToProduct — campo expiration_date', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const [product] = result.current.data!;
-    expect(product.expiration_date).toBeUndefined();
+    expect(product.expirationDate).toBeUndefined();
   });
 
-  it('mantiene todos los demás campos correctamente al mapear con expiration_date', async () => {
+  it('mantiene todos los demás campos correctamente al mapear con expirationDate', async () => {
     const apiProductWithDate = {
       ...baseApiProduct,
       expiration_date: '2026-12-01',
@@ -127,6 +127,6 @@ describe('mapApiProductToProduct — campo expiration_date', () => {
     expect(product.price).toBe(22.0);
     expect(product.quantity).toBe(30);
     // Campo nuevo
-    expect(product.expiration_date).toBe('2026-12-01');
+    expect(product.expirationDate).toBe('2026-12-01');
   });
 });

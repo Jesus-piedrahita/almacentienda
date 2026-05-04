@@ -2,8 +2,8 @@
  * @fileoverview Tests unitarios para ProductsTable — columna condicional de vencimiento.
  *
  * Verifica (REQ-2 / SCENARIO-2):
- * 1. La columna "Vencimiento" NO aparece cuando ningún producto tiene `expiration_date`.
- * 2. La columna "Vencimiento" SÍ aparece cuando al menos un producto tiene `expiration_date`.
+ * 1. La columna "Vencimiento" NO aparece cuando ningún producto tiene `expirationDate`.
+ * 2. La columna "Vencimiento" SÍ aparece cuando al menos un producto tiene `expirationDate`.
  * 3. Los productos sin fecha muestran "Sin vencimiento" en la celda de vencimiento.
  * 4. Los productos con fecha muestran la fecha formateada en dd/mm/aaaa.
  * 5. Los productos con fecha muestran `Vencido` o `Con fecha` según corresponda.
@@ -43,10 +43,10 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 // ── Tests: visibilidad de la columna ──────────────────────────────────────────
 
 describe('ProductsTable — columna "Vencimiento" condicional', () => {
-  it('NO muestra la columna "Vencimiento" cuando ningún producto tiene expiration_date', () => {
+  it('NO muestra la columna "Vencimiento" cuando ningún producto tiene expirationDate', () => {
     const products = [
-      makeProduct({ expiration_date: undefined }),
-      makeProduct({ expiration_date: undefined }),
+      makeProduct({ expirationDate: undefined }),
+      makeProduct({ expirationDate: undefined }),
     ];
     render(<ProductsTable products={products} isLoading={false} />);
 
@@ -54,10 +54,10 @@ describe('ProductsTable — columna "Vencimiento" condicional', () => {
     expect(expirationHeader).not.toBeInTheDocument();
   });
 
-  it('SÍ muestra la columna "Vencimiento" cuando al menos un producto tiene expiration_date', () => {
+  it('SÍ muestra la columna "Vencimiento" cuando al menos un producto tiene expirationDate', () => {
     const products = [
-      makeProduct({ expiration_date: '2026-06-01' }),
-      makeProduct({ expiration_date: undefined }),
+      makeProduct({ expirationDate: '2026-06-01' }),
+      makeProduct({ expirationDate: undefined }),
     ];
     render(<ProductsTable products={products} isLoading={false} />);
 
@@ -65,10 +65,10 @@ describe('ProductsTable — columna "Vencimiento" condicional', () => {
     expect(expirationHeader).toBeInTheDocument();
   });
 
-  it('muestra la columna cuando todos los productos tienen expiration_date', () => {
+  it('muestra la columna cuando todos los productos tienen expirationDate', () => {
     const products = [
-      makeProduct({ expiration_date: '2026-06-01' }),
-      makeProduct({ expiration_date: '2026-07-15' }),
+      makeProduct({ expirationDate: '2026-06-01' }),
+      makeProduct({ expirationDate: '2026-07-15' }),
     ];
     render(<ProductsTable products={products} isLoading={false} />);
 
@@ -79,10 +79,10 @@ describe('ProductsTable — columna "Vencimiento" condicional', () => {
 // ── Tests: contenido de la celda ──────────────────────────────────────────────
 
 describe('ProductsTable — contenido de la celda de vencimiento', () => {
-  it('muestra "Sin vencimiento" para el producto sin expiration_date cuando la columna es visible', () => {
+  it('muestra "Sin vencimiento" para el producto sin expirationDate cuando la columna es visible', () => {
     const products = [
-      makeProduct({ name: 'Con Fecha', expiration_date: '2026-06-01' }),
-      makeProduct({ name: 'Sin Fecha', expiration_date: undefined }),
+      makeProduct({ name: 'Con Fecha', expirationDate: '2026-06-01' }),
+      makeProduct({ name: 'Sin Fecha', expirationDate: undefined }),
     ];
     render(<ProductsTable products={products} isLoading={false} />);
 
@@ -91,8 +91,8 @@ describe('ProductsTable — contenido de la celda de vencimiento', () => {
     expect(screen.getByText('Sin vencimiento')).toBeInTheDocument();
   });
 
-  it('muestra la fecha formateada dd/mm/aaaa para productos con expiration_date', () => {
-    const products = [makeProduct({ expiration_date: '2026-12-25' })];
+  it('muestra la fecha formateada dd/mm/aaaa para productos con expirationDate', () => {
+    const products = [makeProduct({ expirationDate: '2026-12-25' })];
     render(<ProductsTable products={products} isLoading={false} />);
 
     // La fecha 2026-12-25 debe mostrarse en formato local dd/mm/aaaa
@@ -102,14 +102,14 @@ describe('ProductsTable — contenido de la celda de vencimiento', () => {
   });
 
   it('muestra "Con fecha" para productos con fecha futura', () => {
-    const products = [makeProduct({ expiration_date: '2999-12-31' })];
+    const products = [makeProduct({ expirationDate: '2999-12-31' })];
     render(<ProductsTable products={products} isLoading={false} />);
 
     expect(screen.getByText('Con fecha')).toBeInTheDocument();
   });
 
   it('muestra "Vencido" para productos con fecha pasada', () => {
-    const products = [makeProduct({ expiration_date: '2000-01-01' })];
+    const products = [makeProduct({ expirationDate: '2000-01-01' })];
     render(<ProductsTable products={products} isLoading={false} />);
 
     expect(screen.getByText('Vencido')).toBeInTheDocument();

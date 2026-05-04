@@ -37,6 +37,7 @@ interface ApiProduct {
   created_at: string;
   updated_at?: string;
   stock_status: 'good' | 'warning' | 'critical';
+  expiration_date?: string;
 }
 
 interface ApiPagination {
@@ -90,6 +91,8 @@ function mapApiProductToProduct(apiProduct: ApiProduct): Product {
     cost: Number(apiProduct.cost),
     quantity: apiProduct.quantity,
     minStock: apiProduct.min_stock,
+    stockStatus: apiProduct.stock_status,
+    expirationDate: apiProduct.expiration_date,
     createdAt: apiProduct.created_at,
     updatedAt: apiProduct.updated_at || apiProduct.created_at,
   };
@@ -211,7 +214,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       const productData = {
         ...input,
         category_id: Number(input.categoryId),
+        expiration_date: input.expirationDate,
       };
+      delete productData.expirationDate;
 
       const response = await api.post<ApiProduct>('/api/inventory/products', productData);
       const newProduct = mapApiProductToProduct(response.data);
@@ -254,6 +259,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       if (updates.categoryId) {
         updateData.category_id = Number(updates.categoryId);
         delete updateData.categoryId;
+      }
+      if ('expirationDate' in updates) {
+        updateData.expiration_date = updates.expirationDate;
+        delete updateData.expirationDate;
       }
 
       const response = await api.patch<ApiProduct>(

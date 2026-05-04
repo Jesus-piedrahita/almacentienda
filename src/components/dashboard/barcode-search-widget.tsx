@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCurrency } from '@/hooks/use-currency';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useSearchProducts } from '@/hooks/use-inventory';
-import type { Product } from '@/types/inventory';
+import { getStockStatus, type Product } from '@/types/inventory';
 
 // ============================================================
 // Helpers
@@ -34,10 +34,16 @@ function stockStatusLabel(product: Product): {
   label: string;
   variant: 'default' | 'secondary' | 'destructive' | 'outline';
 } {
-  const ratio = product.quantity / (product.minStock || 1);
-  if (ratio >= 2) return { label: 'Stock OK', variant: 'default' };
-  if (ratio >= 1) return { label: 'Stock bajo', variant: 'secondary' };
-  return { label: 'Crítico', variant: 'destructive' };
+  const stockStatus = product.stockStatus ?? getStockStatus(product.quantity, product.minStock);
+
+  switch (stockStatus) {
+    case 'good':
+      return { label: 'Stock OK', variant: 'default' };
+    case 'warning':
+      return { label: 'Stock bajo', variant: 'secondary' };
+    case 'critical':
+      return { label: 'Crítico', variant: 'destructive' };
+  }
 }
 
 // ============================================================

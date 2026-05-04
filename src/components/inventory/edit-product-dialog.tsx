@@ -75,7 +75,7 @@ export function EditProductDialog({
           minStock: product.minStock,
           taxMode: product.taxMode,
           taxRate: product.taxRate,
-          expiration_date: product.expiration_date,
+          expirationDate: product.expirationDate,
         }
       : {
           barcode: '',
@@ -202,7 +202,7 @@ export function EditProductDialog({
       const updates: typeof formData = {
         ...formData,
         markupPct: markupPct === '' ? undefined : markupPct,
-        expiration_date: formData.expiration_date?.trim() || undefined,
+        expirationDate: formData.expirationDate?.trim() || undefined,
       };
       await updateProductMutation.mutateAsync({ id: product.id, updates });
       // Cerrar dialog
@@ -440,13 +440,13 @@ export function EditProductDialog({
 
           {/* Fila 6: Fecha de Vencimiento */}
           <div className="space-y-2">
-            <Label htmlFor="edit-expiration_date">Fecha de Vencimiento</Label>
+            <Label htmlFor="edit-expirationDate">Fecha de Vencimiento</Label>
             <Input
-              id="edit-expiration_date"
+              id="edit-expirationDate"
               type="date"
-              value={formData.expiration_date ?? ''}
+              value={formData.expirationDate ?? ''}
               onChange={(e) =>
-                handleChange('expiration_date', e.target.value || '')
+                handleChange('expirationDate', e.target.value || '')
               }
               disabled={isLoading}
             />

@@ -38,6 +38,14 @@ const lowStockProduct: Product = {
   quantity: 3, // critical stock
 };
 
+const backendWarningProduct: Product = {
+  ...mockProduct,
+  id: 'prod-3',
+  quantity: 50,
+  minStock: 10,
+  stockStatus: 'warning',
+};
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ProductResultCard', () => {
@@ -166,5 +174,12 @@ describe('ProductResultCard', () => {
 
     expect(onAdd).toHaveBeenCalledWith(lowStockProduct);
     expect(onAdd).not.toHaveBeenCalledWith(mockProduct);
+  });
+
+  it('prioriza stockStatus del backend cuando viene informado', () => {
+    render(<ProductResultCard product={backendWarningProduct} onAdd={onAdd} />);
+
+    expect(screen.getByText(/Alerta/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Bien/i)).not.toBeInTheDocument();
   });
 });

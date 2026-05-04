@@ -21,8 +21,8 @@ function makeProduct(overrides: Partial<ExpiringProduct> = {}): ExpiringProduct 
   return {
     id: '1',
     name: 'Producto Test',
-    expiration_date: '2026-05-01',
-    days_remaining: 20,
+    expirationDate: '2026-05-01',
+    daysRemaining: 20,
     quantity: 10,
     ...overrides,
   };
@@ -90,19 +90,19 @@ describe('ExpiringProductsCard — con productos', () => {
 
 describe('ExpiringProductsCard — etiquetas de días restantes', () => {
   it('muestra la fecha formateada para el producto', () => {
-    const products = [makeProduct({ expiration_date: '2026-12-25' })];
+    const products = [makeProduct({ expirationDate: '2026-12-25' })];
     render(<ExpiringProductsCard products={products} />);
     expect(screen.getByText(/Vence el 25\/12\/2026/i)).toBeInTheDocument();
   });
 
   it('muestra "Con fecha" para un producto no vencido', () => {
-    const products = [makeProduct({ expiration_date: '2999-12-31', days_remaining: 999 })];
+    const products = [makeProduct({ expirationDate: '2999-12-31', daysRemaining: 999 })];
     render(<ExpiringProductsCard products={products} />);
     expect(screen.getByText('Con fecha')).toBeInTheDocument();
   });
 
   it('muestra "Vencido" para un producto con fecha pasada', () => {
-    const products = [makeProduct({ expiration_date: '2000-01-01', days_remaining: -3 })];
+    const products = [makeProduct({ expirationDate: '2000-01-01', daysRemaining: -3 })];
     render(<ExpiringProductsCard products={products} />);
     expect(screen.getByText('Vencido')).toBeInTheDocument();
   });

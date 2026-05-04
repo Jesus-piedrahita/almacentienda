@@ -120,8 +120,8 @@ const expiringProductsState = {
     {
       id: '10',
       name: 'Yogur Entero',
-      expiration_date: '2026-05-10',
-      days_remaining: 4,
+      expirationDate: '2026-05-10',
+      daysRemaining: 4,
       quantity: 8,
     },
   ],

@@ -164,7 +164,7 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete, selectedI
 
   // Mostrar columna "Vencimiento" solo si el subconjunto visible actual contiene
   // al menos un producto con fecha de vencimiento.
-  const hasExpiration = paginatedProducts.some((product) => !!product.expiration_date);
+  const hasExpiration = paginatedProducts.some((product) => !!product.expirationDate);
 
   const visibleIds = paginatedProducts.map((product) => product.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds?.has(id));
@@ -284,9 +284,9 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete, selectedI
               </TableHeader>
               <TableBody>
                 {paginatedProducts.map((product) => {
-                  const status = getStockStatus(product.quantity, product.minStock);
+                  const status = product.stockStatus ?? getStockStatus(product.quantity, product.minStock);
                   const statusColor = getStockStatusColor(status);
-                  const expirationStatus = getExpirationDisplayStatus(product.expiration_date);
+                  const expirationStatus = getExpirationDisplayStatus(product.expirationDate);
                   const expirationStatusColor = getExpirationDisplayStatusColor(expirationStatus);
 
                   return (
@@ -325,10 +325,10 @@ export function ProductsTable({ products, isLoading, onEdit, onDelete, selectedI
                       </TableCell>
                       {hasExpiration && (
                         <TableCell className="text-center">
-                          {product.expiration_date ? (
+                          {product.expirationDate ? (
                             <div className="flex flex-col items-center gap-1">
                               <span className="text-xs text-foreground">
-                                {formatDate(product.expiration_date)}
+                                {formatDate(product.expirationDate)}
                               </span>
                               <span
                                 className={cn(

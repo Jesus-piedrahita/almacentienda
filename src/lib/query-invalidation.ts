@@ -8,6 +8,7 @@ type InvalidationOptions = {
   includeTransfers?: boolean;
   includeCategories?: boolean;
   includeProductSearch?: boolean;
+  includeInventoryInvestment?: boolean;
   clientId?: string;
 };
 
@@ -23,6 +24,7 @@ export async function invalidateOperationalQueries(
     includeTransfers = false,
     includeCategories = false,
     includeProductSearch = false,
+    includeInventoryInvestment = false,
     clientId,
   } = options;
 
@@ -79,6 +81,12 @@ export async function invalidateOperationalQueries(
   if (includeTransfers) {
     invalidations.push(
       queryClient.invalidateQueries({ queryKey: ['transfers'], refetchType: 'active' })
+    );
+  }
+
+  if (includeInventoryInvestment) {
+    invalidations.push(
+      queryClient.invalidateQueries({ queryKey: ['inventory-investment'], refetchType: 'active' })
     );
   }
 

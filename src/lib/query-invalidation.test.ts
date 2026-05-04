@@ -53,4 +53,19 @@ describe('invalidateOperationalQueries', () => {
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['clients', '42', 'debts'], refetchType: 'active' });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['clients', '42', 'credit-account'], refetchType: 'active' });
   });
+
+  it('invalidates inventory investment namespace when requested', async () => {
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const queryClient = { invalidateQueries };
+
+    await invalidateOperationalQueries(queryClient as never, {
+      includeInventory: false,
+      includeClients: false,
+      includeReports: false,
+      includeSales: false,
+      includeInventoryInvestment: true,
+    });
+
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['inventory-investment'], refetchType: 'active' });
+  });
 });

@@ -154,8 +154,8 @@ describe('useExpiringProducts — graceful degradation', () => {
       {
         id: '42',          // string (mapeado desde number)
         name: 'Yogur Natural',
-        expiration_date: '2026-04-15',
-        days_remaining: 6,
+        expirationDate: '2026-04-15',
+        daysRemaining: 6,
         quantity: 3,
       },
     ]);

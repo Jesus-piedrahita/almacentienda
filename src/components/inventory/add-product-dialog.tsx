@@ -66,7 +66,7 @@ export function AddProductDialog({
     minStock: 5,
     taxMode: PRODUCT_TAX_MODE.INHERIT,
     taxRate: null,
-    expiration_date: undefined,
+    expirationDate: undefined,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof CreateProductInput, string>>>({});
@@ -170,7 +170,7 @@ export function AddProductDialog({
       const payload: CreateProductInput = {
         ...formData,
         markupPct: markupPct === '' ? undefined : markupPct,
-        expiration_date: formData.expiration_date?.trim() || undefined,
+        expirationDate: formData.expirationDate?.trim() || undefined,
       };
       await addProductMutation.mutateAsync(payload);
       // Resetear formulario y cerrar
@@ -194,7 +194,7 @@ export function AddProductDialog({
       minStock: 5,
       taxMode: PRODUCT_TAX_MODE.INHERIT,
       taxRate: null,
-      expiration_date: undefined,
+      expirationDate: undefined,
     });
     setErrors({});
     setMarkupPct('');
@@ -418,13 +418,13 @@ export function AddProductDialog({
 
           {/* Fila 6: Fecha de Vencimiento */}
           <div className="space-y-2">
-            <Label htmlFor="expiration_date">Fecha de Vencimiento</Label>
+            <Label htmlFor="expirationDate">Fecha de Vencimiento</Label>
             <Input
-              id="expiration_date"
+              id="expirationDate"
               type="date"
-              value={formData.expiration_date ?? ''}
+              value={formData.expirationDate ?? ''}
               onChange={(e) =>
-                handleChange('expiration_date', e.target.value || '')
+                handleChange('expirationDate', e.target.value || '')
               }
               disabled={isLoading}
             />

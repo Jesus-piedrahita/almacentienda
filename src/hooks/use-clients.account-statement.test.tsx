@@ -4,17 +4,25 @@ import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import api from '@/lib/api';
-import { useClientCreditAccount, useRegisterPayment } from './use-clients';
+import { invalidateOperationalQueries } from '@/lib/query-invalidation';
+import { useClientCreditAccount, useMarkDebtPaid, useRegisterPayment } from './use-clients';
+
+vi.mock('@/lib/query-invalidation', () => ({
+  invalidateOperationalQueries: vi.fn(() => Promise.resolve()),
+}));
 
 vi.mock('@/lib/api', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
 const mockedApiGet = vi.mocked(api.get);
 const mockedApiPost = vi.mocked(api.post);
+const mockedApiPatch = vi.mocked(api.patch);
+const mockedInvalidateOperationalQueries = vi.mocked(invalidateOperationalQueries);
 
 function makeQueryClient() {
   return new QueryClient({
@@ -97,6 +105,26 @@ describe('client credit account hooks', () => {
       payment_method: 'cash',
       reference_note: undefined,
       note: 'Efectivo',
+    });
+  });
+
+  it('usa el shortcut legacy para marcar una deuda puntual como pagada', async () => {
+    const queryClient = makeQueryClient();
+    mockedApiPatch.mockResolvedValueOnce({ data: { message: 'Deuda marcada como pagada', debt_id: 15 } });
+
+    const { result } = renderHook(() => useMarkDebtPaid(), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({ debtId: '15', clientId: '1' });
+
+    expect(mockedApiPatch).toHaveBeenCalledWith('/api/clients/debts/15/pay');
+    expect(mockedInvalidateOperationalQueries).toHaveBeenCalledWith(queryClient, {
+      includeClients: true,
+      includeReports: true,
+      includeInventory: false,
+      includeSales: false,
+      clientId: '1',
     });
   });
 });

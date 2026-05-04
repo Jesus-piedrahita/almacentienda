@@ -1,9 +1,9 @@
 /**
- * @fileoverview Tests de integración para AddProductDialog — campo expiration_date.
+ * @fileoverview Tests de integración para AddProductDialog — campo expirationDate.
  *
  * Verifica (REQ-3 / SCENARIO-4):
- * 1. El payload enviado al hook incluye `expiration_date` cuando el usuario llena el campo.
- * 2. El payload enviado al hook tiene `expiration_date: undefined` cuando el campo está vacío.
+ * 1. El payload enviado al hook incluye `expirationDate` cuando el usuario llena el campo.
+ * 2. El payload enviado al hook tiene `expirationDate: undefined` cuando el campo está vacío.
  *
  * Estrategia:
  * - `useAddProduct` se mockea con `vi.mock` para capturar el payload sin hacer peticiones HTTP.
@@ -63,7 +63,7 @@ function renderDialog(open = true, onOpenChange = vi.fn()) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('AddProductDialog — expiration_date en el payload de submit', () => {
+describe('AddProductDialog — expirationDate en el payload de submit', () => {
   const mockMutateAsync = vi.fn();
 
   beforeEach(() => {
@@ -75,7 +75,7 @@ describe('AddProductDialog — expiration_date en el payload de submit', () => {
     mockMutateAsync.mockResolvedValue(undefined);
   });
 
-  it('incluye expiration_date en el payload cuando el usuario llena el campo de fecha', async () => {
+  it('incluye expirationDate en el payload cuando el usuario llena el campo de fecha', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -94,10 +94,10 @@ describe('AddProductDialog — expiration_date en el payload de submit', () => {
 
     expect(mockMutateAsync).toHaveBeenCalledOnce();
     const payload = mockMutateAsync.mock.calls[0][0];
-    expect(payload.expiration_date).toBe('2026-12-31');
+    expect(payload.expirationDate).toBe('2026-12-31');
   });
 
-  it('envía expiration_date como undefined cuando el campo está vacío', async () => {
+  it('envía expirationDate como undefined cuando el campo está vacío', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -115,6 +115,6 @@ describe('AddProductDialog — expiration_date en el payload de submit', () => {
     expect(mockMutateAsync).toHaveBeenCalledOnce();
     const payload = mockMutateAsync.mock.calls[0][0];
     // Campo vacío → debe normalizarse a undefined
-    expect(payload.expiration_date).toBeUndefined();
+    expect(payload.expirationDate).toBeUndefined();
   });
 });

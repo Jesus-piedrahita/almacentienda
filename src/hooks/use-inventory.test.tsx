@@ -154,6 +154,7 @@ describe('useSearchProducts', () => {
     expect(product.cost).toBe(12.0);
     expect(product.quantity).toBe(50);
     expect(product.minStock).toBe(10);
+    expect(product.stockStatus).toBe('good');
     expect(product.createdAt).toBe('2026-01-01T00:00:00Z');
     expect(product.updatedAt).toBe('2026-01-02T00:00:00Z');
   });
