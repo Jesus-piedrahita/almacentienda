@@ -12,6 +12,9 @@ import type {
   InventoryStats,
   CreateProductInput,
   CreateCategoryInput,
+  CategoryTaxMode,
+  ProductTaxMode,
+  EffectiveTaxMode,
 } from '@/types/inventory';
 
 // Tipos para la respuesta de la API
@@ -19,6 +22,8 @@ interface ApiCategory {
   id: number;
   name: string;
   description?: string;
+  default_tax_mode: CategoryTaxMode;
+  default_tax_rate?: number | null;
   created_at: string;
   updated_at?: string;
 }
@@ -32,8 +37,13 @@ interface ApiProduct {
   category_name: string;
   price: number;
   cost: number;
+  markup_pct?: number | null;
   quantity: number;
   min_stock: number;
+  tax_mode: ProductTaxMode;
+  tax_rate?: number | null;
+  effective_tax_mode: EffectiveTaxMode;
+  effective_tax_rate?: number | null;
   created_at: string;
   updated_at?: string;
   stock_status: 'good' | 'warning' | 'critical';
@@ -76,6 +86,11 @@ function mapApiCategoryToCategory(apiCategory: ApiCategory): Category {
     id: String(apiCategory.id),
     name: apiCategory.name,
     description: apiCategory.description,
+    defaultTaxMode: apiCategory.default_tax_mode,
+    defaultTaxRate:
+      apiCategory.default_tax_rate !== undefined && apiCategory.default_tax_rate !== null
+        ? Number(apiCategory.default_tax_rate)
+        : null,
   };
 }
 
@@ -89,9 +104,23 @@ function mapApiProductToProduct(apiProduct: ApiProduct): Product {
     categoryName: apiProduct.category_name,
     price: Number(apiProduct.price),
     cost: Number(apiProduct.cost),
+    markupPct:
+      apiProduct.markup_pct !== undefined && apiProduct.markup_pct !== null
+        ? Number(apiProduct.markup_pct)
+        : undefined,
     quantity: apiProduct.quantity,
     minStock: apiProduct.min_stock,
     stockStatus: apiProduct.stock_status,
+    taxMode: apiProduct.tax_mode,
+    taxRate:
+      apiProduct.tax_rate !== undefined && apiProduct.tax_rate !== null
+        ? Number(apiProduct.tax_rate)
+        : null,
+    effectiveTaxMode: apiProduct.effective_tax_mode,
+    effectiveTaxRate:
+      apiProduct.effective_tax_rate !== undefined && apiProduct.effective_tax_rate !== null
+        ? Number(apiProduct.effective_tax_rate)
+        : null,
     expirationDate: apiProduct.expiration_date,
     createdAt: apiProduct.created_at,
     updatedAt: apiProduct.updated_at || apiProduct.created_at,
@@ -214,8 +243,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       const productData = {
         ...input,
         category_id: Number(input.categoryId),
+        markup_pct: input.markupPct ?? null,
+        min_stock: input.minStock,
+        tax_mode: input.taxMode,
+        tax_rate: input.taxRate ?? null,
         expiration_date: input.expirationDate,
       };
+      delete productData.categoryId;
+      delete productData.markupPct;
+      delete productData.minStock;
+      delete productData.taxMode;
+      delete productData.taxRate;
       delete productData.expirationDate;
 
       const response = await api.post<ApiProduct>('/api/inventory/products', productData);
@@ -259,6 +297,22 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       if (updates.categoryId) {
         updateData.category_id = Number(updates.categoryId);
         delete updateData.categoryId;
+      }
+      if ('minStock' in updates) {
+        updateData.min_stock = updates.minStock;
+        delete updateData.minStock;
+      }
+      if ('markupPct' in updates) {
+        updateData.markup_pct = updates.markupPct ?? null;
+        delete updateData.markupPct;
+      }
+      if ('taxMode' in updates) {
+        updateData.tax_mode = updates.taxMode;
+        delete updateData.taxMode;
+      }
+      if ('taxRate' in updates) {
+        updateData.tax_rate = updates.taxRate ?? null;
+        delete updateData.taxRate;
       }
       if ('expirationDate' in updates) {
         updateData.expiration_date = updates.expirationDate;
